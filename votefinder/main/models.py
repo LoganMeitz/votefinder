@@ -84,8 +84,8 @@ class VotecountTemplate(models.Model):
     after_unvoted_vote = models.CharField(max_length=256, blank=True)
     detail_level = models.IntegerField(choices=DETAIL_LEVEL_CHOICES, default=3)
     hide_zero_votes = models.BooleanField(default=False)
-    full_tick = models.CharField(max_length=256, default='https://{}/t.png'.format(settings.PRIMARY_DOMAIN))
-    empty_tick = models.CharField(max_length=256, default='https://{}/te.png'.format(settings.PRIMARY_DOMAIN))
+    full_tick = models.CharField(max_length=256, default='https://{}/t.png'.format(settings.VF_PRIMARY_DOMAIN))
+    empty_tick = models.CharField(max_length=256, default='https://{}/te.png'.format(settings.VF_PRIMARY_DOMAIN))
 
     def __str__(self):
         if self.system_default:

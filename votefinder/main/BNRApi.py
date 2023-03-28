@@ -7,7 +7,7 @@ from django.conf import settings
 class BNRApi():
     def __init__(self):
         self.session = requests.Session()
-        self.api_key = settings.BNR_API_KEY
+        self.api_key = settings.VF_BNR_API_KEY
         self.session.headers.update({'XF-API-Key': self.api_key})
         # review if necessary
 

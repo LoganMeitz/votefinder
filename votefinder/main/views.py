@@ -939,8 +939,8 @@ def draw_votecount_text(draw, vc, xpos, ypos, max_width, font, bold_font):
 
 def votecount_to_image(img, game, xpos=0, ypos=0, max_width=600):
     draw = ImageDraw.Draw(img)
-    regular_font = ImageFont.truetype(settings.REGULAR_FONT_PATH, 15)
-    bold_font = ImageFont.truetype(settings.BOLD_FONT_PATH, 15)
+    regular_font = ImageFont.truetype(settings.VF_REGULAR_FONT_PATH, 15)
+    bold_font = ImageFont.truetype(settings.VF_BOLD_FONT_PATH, 15)
     tid = 11  # default template, no custom image template support yet
     game.template = VotecountTemplate.objects.get(id=tid)
     vc = VotecountFormatter.VotecountFormatter(game)
