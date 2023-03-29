@@ -7,6 +7,8 @@
 # configuration required by Django and sensible defaults for other settings. Any secrets should be in
 # the dotenv file, or else in the operating system's environment.
 
+from django.core.exceptions import ImproperlyConfigured
+
 # env_helpers is a helper module for accessing the environment.
 from .env_helpers import env_bool, env_string, env_integer, env_string_list
 
@@ -30,6 +32,12 @@ VF_LOG_LEVEL = env_string('VF_LOG_LEVEL')
 VF_LOG_FILE_PATH = env_string('VF_LOG_FILE_PATH')
 
 # Database settings
+VF_DATABASE_DRIVER = env_string('VF_DATABASE_DRIVER', 'mysql')
+
+# Used when database driver is sqlite
+VF_SQLITE_FILENAME = env_string('VF_SQLITE_FILENAME')
+
+# Used when database driver is mysql
 VF_MYSQL_NAME = env_string('VF_MYSQL_NAME')
 VF_MYSQL_USER = env_string('VF_MYSQL_USER')
 VF_MYSQL_PASS = env_string('VF_MYSQL_PASS')
@@ -100,8 +108,10 @@ EMAIL_HOST_PASSWORD = VF_EMAIL_PASS
 EMAIL_USE_TLS = VF_EMAIL_USE_TLS
 DEFAULT_FROM_EMAIL = VF_FROM_EMAIL
 
-DATABASES = {
-    'default': {
+DATABASES = {}
+
+if VF_DATABASE_DRIVER == 'mysql':
+    DATABASES['default'] = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': VF_MYSQL_NAME,
         'USER': VF_MYSQL_USER,
@@ -109,8 +119,14 @@ DATABASES = {
         'HOST': VF_MYSQL_HOST,
         'PORT': VF_MYSQL_PORT,
         'OPTIONS': {'charset': 'utf8mb4'},
-    },
-}
+    }
+elif VF_DATABASE_DRIVER == 'sqlite':
+    DATABASES['default'] = {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': VF_SQLITE_FILENAME
+    }
+else:
+    raise ImproperlyConfigured('VF_DATABASE_DRIVER must be set to one of: mysql, sqlite')
 
 TEMPLATES = [
     {
