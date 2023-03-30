@@ -92,7 +92,7 @@ def add_game(request):
                     if game.home_forum == 'sa':
                         message_data = {'content': '{} has opened {}. Thread link: https://forums.somethingawful.com/showthread.php?threadid={}'.format(game.moderator.name, game.name, game.thread_id), 'username': 'Votefinder Game Announcement'}
                         session = requests.Session()
-                        session.post('https://discordapp.com/api/webhooks/{}/{}'.format(settings.SA_DISCORD_CHANNEL, settings.SA_DISCORD_WEBHOOK), data=message_data)  # TODO issue 198
+                        session.post('https://discordapp.com/api/webhooks/{}/{}'.format(settings.VF_SA_DISCORD_CHANNEL, settings.VF_SA_DISCORD_WEBHOOK), data=message_data)  # TODO issue 198
                 else:
                     return_status['success'] = False
                     return_status['message'] = "Couldn't download or parse the forum thread.  Sorry!"
