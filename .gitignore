@@ -1,5 +1,4 @@
 .env
 *.pyc
 .idea/
-votefinder/settings.py
 .vscode/
