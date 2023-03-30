@@ -1,37 +1,104 @@
-# Django settings for votefinder project.
+# Django configuration, as well as many settings used by votefinder itself.
+# This file reads environment variables from the operating system as well as a local dotenv (.env) file.
+# If you are setting up your local development environment for the first time, you shouldn't have to edit
+# this file. See the installation instructions on how to set up your own dotenv file for local development.
+#
+# Do NOT put any secrets in this file! It is part of the repository. It should only contain static site
+# configuration required by Django and sensible defaults for other settings. Any secrets should be in
+# the dotenv file, or else in the operating system's environment.
 
-import os
+# env_helpers is a helper module for accessing the environment.
+from .env_helpers import env_bool, env_string, env_integer, env_string_list
 
-# Import sensitive data from envvars
-VF_MYSQL_HOST = os.environ.get('VF_MYSQL_HOST') or 'MySQL database server'
-VF_MYSQL_USER = os.environ.get('VF_MYSQL_USER') or 'MySQL database user'
-VF_MYSQL_PASS = os.environ.get('VF_MYSQL_PASS') or 'MySQL database password'
-VF_MYSQL_NAME = os.environ.get('VF_MYSQL_NAME') or 'MySQL database name'
-VF_SA_USER = os.environ.get('VF_SA_USER') or 'SA forums account name'
-VF_SA_PASS = os.environ.get('VF_SA_PASS') or 'SA forums account password'
-VF_EMAIL_HOST = os.environ.get('VF_EMAIL_HOST') or 'Email server'
-VF_EMAIL_USER = os.environ.get('VF_EMAIL_USER') or 'Email user'
-VF_EMAIL_PASS = os.environ.get('VF_EMAIL_PASS') or 'Email password'
-VF_DOMAINS = os.environ.get('VF_DOMAINS') or '127.0.0.1 localhost'
-VF_FROM_EMAIL = os.environ.get('VF_FROM_EMAIL') or 'reset@votefinder.org'
-VF_ADMIN_NAME = os.environ.get('VF_ADMIN_NAME') or 'Your Name'
-VF_ADMIN_EMAIL = os.environ.get('VF_ADMIN_EMAIL') or 'you@yourname.com'
-BNR_API_KEY = os.environ.get('BNR_API_KEY') or 'Insert your API key here'
-VF_DEBUG_STR = os.environ.get('VF_DEBUG_STR') or False
-SA_DISCORD_WEBHOOK = os.environ.get('SA_DISCORD_WEBHOOK') or ''
-SA_DISCORD_CHANNEL = os.environ.get('SA_DISCORD_CHANNEL') or ''
-SECRET_KEY = os.environ.get('SECRET_KEY') or 'Insert your secret key here'
-PRIMARY_DOMAIN = VF_DOMAINS.split(' ', 1)[0]
+# --------------------------------------------------------------------------------
+# Various Django settings.
+VF_DEBUG = env_bool('VF_DEBUG', default=False)
+VF_SECRET_KEY = env_string('VF_SECRET_KEY', default='Votefinder Default Secret Key')
+VF_TIME_ZONE = env_string('VF_TIME_ZONE', default='America/New_York')  # Default is the TZ of the SA forum account.
 
-DEBUG = bool(VF_DEBUG_STR == 'True')
+# This becomes Django's "allowed domains" setting.
+VF_DOMAINS = env_string_list('VF_DOMAINS', separator=' ', default=['127.0.0.1', 'localhost'])
 
-ALLOWED_HOSTS = VF_DOMAINS.split()
+# This is what Votefinder considers the domain it's running on and may be used when generating links to Votefinder and such.
+# Default primary domain to the first domain listed, but you can override it if you really want.
+if len(VF_DOMAINS) > 0:
+    VF_PRIMARY_DOMAIN = VF_DOMAINS[0]
+VF_PRIMARY_DOMAIN = env_string('VF_PRIMARY_DOMAIN', VF_PRIMARY_DOMAIN)
+
+# Logging settings
+VF_LOG_LEVEL = env_string('VF_LOG_LEVEL')
+VF_LOG_FILE_PATH = env_string('VF_LOG_FILE_PATH')
+
+# Database settings
+VF_MYSQL_NAME = env_string('VF_MYSQL_NAME')
+VF_MYSQL_USER = env_string('VF_MYSQL_USER')
+VF_MYSQL_PASS = env_string('VF_MYSQL_PASS')
+VF_MYSQL_HOST = env_string('VF_MYSQL_HOST')
+VF_MYSQL_PORT = env_integer('VF_MYSQL_PORT', default=3306)
+
+# Email server settings
+VF_EMAIL_HOST = env_string('VF_EMAIL_HOST')
+VF_EMAIL_PORT = env_integer('VF_EMAIL_PORT', default=25)
+VF_EMAIL_USER = env_string('VF_EMAIL_USER')
+VF_EMAIL_PASS = env_string('VF_EMAIL_PASS')
+VF_EMAIL_USE_TLS = env_bool('VF_EMAIL_USE_TLS', default=True)
+
+# Email sent by Votefinder comes from this address
+VF_FROM_EMAIL = env_string('VF_FROM_EMAIL', default='reset@votefinder.org')
+
+# Administrator contact information
+VF_ADMIN_NAME = env_string('VF_ADMIN_NAME', default='Administrator')
+VF_ADMIN_EMAIL = env_string('VF_ADMIN_EMAIL', default='admin@votefinder.org')
+
+# SomethingAwful forum and discord integration
+VF_SA_USER = env_string('VF_SA_USER')
+VF_SA_PASS = env_string('VF_SA_PASS')
+VF_SA_DISCORD_WEBHOOK = env_string('VF_SA_DISCORD_WEBHOOK')
+VF_SA_DISCORD_CHANNEL = env_string('VF_SA_DISCORD_CHANNEL')
+
+# Bread n' Roses forum integration
+VF_BNR_API_KEY = env_string('VF_BNR_API_KEY')
+
+# Fonts used in vote image generation
+VF_REGULAR_FONT_PATH = 'votefinder/static/MyriadPro-Regular.otf'
+VF_BOLD_FONT_PATH = 'votefinder/static/MyriadPro-Bold.otf'
+
+# --------------------------------------------------------------------------------
+# From here on, it's settings interpreted directly by Django. Many of them are set from settings read from the environment above,
+# but some of them are unlikely to need to change based on environment and are not read.
+SITE_ID = 1
+
+FIXTURE_DIRS = ['votefinder/fixtures/']
+
+WEB_ROOT = 'votefinder/'
+STATIC_ROOT = 'votefinder/static/'
+MEDIA_ROOT = ''
+
+LOGIN_URL = '/auth/login'
+LOGIN_REDIRECT_URL = '/'
+MEDIA_URL = 'http://media.votefinder.org/media/'
+ADMIN_MEDIA_PREFIX = 'http://media.votefinder.org/admin/'
+
+LANGUAGE_CODE = 'en-us'
+USE_I18N = True
+USE_L10N = True
+
+DEBUG = VF_DEBUG
+ALLOWED_HOSTS = VF_DOMAINS
+SECRET_KEY = VF_SECRET_KEY
+TIME_ZONE = VF_TIME_ZONE
 
 ADMINS = (
     [(VF_ADMIN_NAME, VF_ADMIN_EMAIL)]
 )
-
 MANAGERS = ADMINS
+
+EMAIL_HOST = VF_EMAIL_HOST
+EMAIL_PORT = VF_EMAIL_PORT
+EMAIL_HOST_USER = VF_EMAIL_USER
+EMAIL_HOST_PASSWORD = VF_EMAIL_PASS
+EMAIL_USE_TLS = VF_EMAIL_USE_TLS
+DEFAULT_FROM_EMAIL = VF_FROM_EMAIL
 
 DATABASES = {
     'default': {
@@ -40,63 +107,10 @@ DATABASES = {
         'USER': VF_MYSQL_USER,
         'PASSWORD': VF_MYSQL_PASS,
         'HOST': VF_MYSQL_HOST,
-        'PORT': 3306,
+        'PORT': VF_MYSQL_PORT,
         'OPTIONS': {'charset': 'utf8mb4'},
     },
 }
-
-LOGIN_URL = '/auth/login'
-LOGIN_REDIRECT_URL = '/'
-
-SA_LOGIN = VF_SA_USER
-SA_PASSWORD = VF_SA_PASS
-
-EMAIL_HOST = VF_EMAIL_HOST
-EMAIL_PORT = 25
-EMAIL_HOST_USER = VF_EMAIL_USER
-EMAIL_HOST_PASSWORD = VF_EMAIL_PASS
-EMAIL_USE_TLS = True
-DEFAULT_FROM_EMAIL = VF_FROM_EMAIL
-
-WEB_ROOT = 'votefinder/'
-REGULAR_FONT_PATH = 'votefinder/static/MyriadPro-Regular.otf'
-BOLD_FONT_PATH = 'votefinder/static/MyriadPro-Bold.otf'
-STATIC_ROOT = 'votefinder/static/'
-
-# On Unix systems, a value of None will cause Django to use the same
-# timezone as the operating system.
-# If running in a Windows environment this must be set to the same as your
-# system time zone.
-TIME_ZONE = 'America/New_York'  # Set to the TZ of the SA forum account.
-
-# Language code for this installation. All choices can be found here:
-# http://www.i18nguy.com/unicode/language-identifiers.html
-LANGUAGE_CODE = 'en-us'
-
-# Site ID for this Django site. Properties of this site can be edited in
-# the admin section.
-SITE_ID = 1
-
-# If you set this to False, Django will make some optimizations so as not
-# to load the internationalization machinery.
-USE_I18N = True
-
-# If you set this to False, Django will not format dates, numbers and
-# calendars according to the current locale
-USE_L10N = True
-
-# Absolute path to the directory that holds media. Example: "/home/media"
-MEDIA_ROOT = ''
-
-# URL that handles the media served from MEDIA_ROOT. Make sure to use a
-# trailing slash if there is a path component (optional in other cases).
-# Examples: "http://media.lawrence.com", "http://example.com/media/"
-MEDIA_URL = 'http://media.votefinder.org/media/'
-
-# URL prefix for admin media -- CSS, JavaScript and images. Make sure to use a
-# trailing slash.
-# Examples: "http://foo.com/media/", "/media/".
-ADMIN_MEDIA_PREFIX = 'http://media.votefinder.org/admin/'
 
 TEMPLATES = [
     {
@@ -122,21 +136,21 @@ TEMPLATES = [
     },
 ]
 
-if DEBUG:
+if VF_LOG_FILE_PATH is not None and VF_LOG_LEVEL is not None:
     LOGGING = {
         'version': 1,
         'disable_existing_loggers': False,
         'handlers': {
             'file': {
-                'level': 'DEBUG',
+                'level': VF_LOG_LEVEL,
                 'class': 'logging.FileHandler',
-                'filename': '/var/log/votefinder/vf_debug.log',
+                'filename': VF_LOG_FILE_PATH,
             },
         },
         'loggers': {
             'django': {
                 'handlers': ['file'],
-                'level': 'DEBUG',
+                'level': VF_LOG_LEVEL,
                 'propagate': True,
             },
         },

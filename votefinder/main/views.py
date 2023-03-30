@@ -92,7 +92,7 @@ def add_game(request):
                     if game.home_forum == 'sa':
                         message_data = {'content': '{} has opened {}. Thread link: https://forums.somethingawful.com/showthread.php?threadid={}'.format(game.moderator.name, game.name, game.thread_id), 'username': 'Votefinder Game Announcement'}
                         session = requests.Session()
-                        session.post('https://discordapp.com/api/webhooks/{}/{}'.format(settings.SA_DISCORD_CHANNEL, settings.SA_DISCORD_WEBHOOK), data=message_data)  # TODO issue 198
+                        session.post('https://discordapp.com/api/webhooks/{}/{}'.format(settings.VF_SA_DISCORD_CHANNEL, settings.VF_SA_DISCORD_WEBHOOK), data=message_data)  # TODO issue 198
                 else:
                     return_status['success'] = False
                     return_status['message'] = "Couldn't download or parse the forum thread.  Sorry!"
@@ -939,8 +939,8 @@ def draw_votecount_text(draw, vc, xpos, ypos, max_width, font, bold_font):
 
 def votecount_to_image(img, game, xpos=0, ypos=0, max_width=600):
     draw = ImageDraw.Draw(img)
-    regular_font = ImageFont.truetype(settings.REGULAR_FONT_PATH, 15)
-    bold_font = ImageFont.truetype(settings.BOLD_FONT_PATH, 15)
+    regular_font = ImageFont.truetype(settings.VF_REGULAR_FONT_PATH, 15)
+    bold_font = ImageFont.truetype(settings.VF_BOLD_FONT_PATH, 15)
     tid = 11  # default template, no custom image template support yet
     game.template = VotecountTemplate.objects.get(id=tid)
     vc = VotecountFormatter.VotecountFormatter(game)

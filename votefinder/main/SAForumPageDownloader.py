@@ -38,8 +38,8 @@ class SAForumPageDownloader():
         self.log_login_attempt()
 
         page_request = self.session.post('https://forums.somethingawful.com/account.php',
-                                         data={'action': 'login', 'username': settings.SA_LOGIN,
-                                               'password': settings.SA_PASSWORD, 'secure_login': ''})
+                                         data={'action': 'login', 'username': settings.VF_SA_USER,
+                                               'password': settings.VF_SA_PASS, 'secure_login': ''})
         page_text = page_request.text
 
         if self.is_logged_in_correctly(page_text):

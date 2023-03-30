@@ -7,8 +7,8 @@ from votefinder.main.models import BlogPost, Game, GameStatusUpdate
 
 class LatestRss(Feed):
     title = 'Votefinder Updates'
-    link = 'https://{}/'.format(settings.PRIMARY_DOMAIN)
-    author_name = 'Alli'
+    link = 'https://{}/'.format(settings.VF_PRIMARY_DOMAIN)
+    author_name = 'Votefinder Team'
     feed_url = '{}rss'.format(link)
     description = 'Changes and updates to the Votefinder site.'
     guid = '/'
@@ -23,7 +23,7 @@ class LatestRss(Feed):
         return item.text
 
     def item_link(self, item):  # noqa: WPS110
-        return 'https://{}/'.format(settings.PRIMARY_DOMAIN)
+        return 'https://{}/'.format(settings.VF_PRIMARY_DOMAIN)
 
     def item_pubdate(self, item):  # noqa: WPS110
         return item.timestamp
@@ -36,8 +36,8 @@ class LatestAtom(LatestRss):
 
 class GameStatusRss(Feed):
     title = 'Votefinder Game Status Updates'
-    link = 'https://{}/'.format(settings.PRIMARY_DOMAIN)
-    author_name = 'Alli'
+    link = 'https://{}/'.format(settings.VF_PRIMARY_DOMAIN)
+    author_name = 'Votefinder Team'
     feed_url = '{}game_status'.format(link)
     description = 'Game status updates for games tracked by Votefinder.'
     guid = '/'
@@ -67,8 +67,8 @@ class GameStatusAtom(GameStatusRss):
 
 class SpecificGameStatusRss(Feed):
     title = 'Votefinder Game Status Updates'
-    link = 'https://{}/'.format(settings.PRIMARY_DOMAIN)
-    author_name = 'Alli'
+    link = 'https://{}/'.format(settings.VF_PRIMARY_DOMAIN)
+    author_name = 'Votefinder Team'
     feed_url = '{}game_status'.format(link)
     description = 'Game status updates for games tracked by Votefinder.'
     guid = '/'
