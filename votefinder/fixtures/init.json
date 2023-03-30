@@ -1,0 +1,90 @@
+[
+{
+    "model": "main.theme",
+    "pk": 1,
+    "fields": {
+        "name": "default"
+    }
+},
+{
+    "model": "main.theme",
+    "pk": 2,
+    "fields": {
+        "name": "yospos"
+    }
+},
+{
+    "model": "main.theme",
+    "pk": 3,
+    "fields": {
+        "name": "classic"
+    }
+},
+{
+    "model": "main.theme",
+    "pk": 4,
+    "fields": {
+        "name": "amberpos"
+    }
+},
+{
+    "model": "main.player",
+    "pk": 1,
+    "fields": {
+        "name": "Execute No One!",
+        "sa_uid": -1,
+        "bnr_uid": null,
+        "slug": "",
+        "last_post": null,
+        "total_posts": 0
+    }
+},
+{
+    "model": "main.votecounttemplate",
+    "pk": 1,
+    "fields": {
+        "creator": 1,
+        "name": "Default Without Links",
+        "shared": true,
+        "system_default": false,
+        "overall": "[b][u]Votecount for Day {{day}}[/u][/b]\r\n\r\n{{votecount}}\r\n\r\n{{notvoting}}\r\n\r\nWith {{alive}} alive, it's {{tolynch}} votes to execute.  {{deadline}}",
+        "single_line": "{{ticks}} [b]{{target}} ({{count}}):[/b] {{votelist}}",
+        "deadline_exists": "The current deadline is {{deadline}} -- that's in about [u]{{timeuntildeadline}}[/u].",
+        "deadline_not_set": "There is currently no deadline set.",
+        "before_vote": "[u]",
+        "after_vote": "[/u]",
+        "before_unvote": "[s]",
+        "after_unvote": "[/s]",
+        "before_unvoted_vote": "",
+        "after_unvoted_vote": "",
+        "detail_level": 3,
+        "hide_zero_votes": false,
+        "full_tick": "https://votefinder.org/static/t.png",
+        "empty_tick": "https://votefinder.org/static/te.png"
+    }
+},
+{
+    "model": "main.votecounttemplate",
+    "pk": 2,
+    "fields": {
+        "creator": 1,
+        "name": "Default",
+        "shared": true,
+        "system_default": true,
+        "overall": "[b][u]Votecount for Day {{day}}[/u][/b]\r\n\r\n{{votecount}}\r\n\r\n{{notvoting}}\r\n\r\nWith {{alive}} alive, it's {{tolynch}} votes to execute.  {{deadline}}",
+        "single_line": "{{ticks}} [b]{{target}} ({{count}}):[/b] {{votelist}}",
+        "deadline_exists": "The current deadline is {{deadline}} -- that's in about [u]{{timeuntildeadline}}[/u].",
+        "deadline_not_set": "There is currently no deadline set.",
+        "before_vote": "[url={{url}}]",
+        "after_vote": "[/url]",
+        "before_unvote": "[s]",
+        "after_unvote": "[/s]",
+        "before_unvoted_vote": "",
+        "after_unvoted_vote": "",
+        "detail_level": 3,
+        "hide_zero_votes": false,
+        "full_tick": "https://votefinder.org/static/t.png",
+        "empty_tick": "https://votefinder.org/static/te.png"
+    }
+}
+]

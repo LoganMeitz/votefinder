@@ -64,6 +64,8 @@ VF_BOLD_FONT_PATH = 'votefinder/static/MyriadPro-Bold.otf'
 # but some of them are unlikely to need to change based on environment and are not read.
 SITE_ID = 1
 
+FIXTURE_DIRS = ['votefinder/fixtures/']
+
 WEB_ROOT = 'votefinder/'
 STATIC_ROOT = 'votefinder/static/'
 MEDIA_ROOT = ''
