@@ -2,9 +2,13 @@
 # This file reads environment variables from the operating system as well as a local dotenv (.env) file.
 # If you are setting up your local development environment for the first time, you shouldn't have to edit
 # this file. See the installation instructions on how to set up your own dotenv file for local development.
+#
+# Do NOT put any secrets in this file! It is part of the repository. It should only contain static site
+# configuration required by Django and sensible defaults for other settings. Any secrets should be in
+# the dotenv file, or else in the operating system's environment.
 
-# env is the helper module for accessing the environment.
-from .env import env_bool, env_string, env_integer, env_string_list
+# env_helpers is a helper module for accessing the environment.
+from .env_helpers import env_bool, env_string, env_integer, env_string_list
 
 # --------------------------------------------------------------------------------
 # Various Django settings.
