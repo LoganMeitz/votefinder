@@ -40,6 +40,18 @@
     }
 },
 {
+    "model": "main.player",
+    "pk": 2,
+    "fields": {
+        "name": "Anonymous",
+        "sa_uid": 0,
+        "bnr_uid": null,
+        "slug": "",
+        "last_post": null,
+        "total_posts": 0
+    }
+},
+{
     "model": "main.votecounttemplate",
     "pk": 1,
     "fields": {
