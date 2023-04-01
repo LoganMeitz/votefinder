@@ -79,8 +79,3 @@ class SAForumPageDownloader():
         inputs.pop('preview')
 
         self.session.post(post_url, data=inputs)
-
-
-if __name__ == '__main__':
-    dl = SAForumPageDownloader()
-    result = dl.download('https://forums.somethingawful.com/showthread.php?threadid=3552086')  # noqa: WPS110
