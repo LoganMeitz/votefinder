@@ -4,7 +4,6 @@ import requests
 
 from bs4 import BeautifulSoup
 from django.conf import settings
-from votefinder.main.models import Game
 
 
 class SAForumPageDownloader():
@@ -28,14 +27,9 @@ class SAForumPageDownloader():
             return None
         return None
 
-    def log_login_attempt(self):
-        game = Game.objects.get(id=228)
-        game.status_update('Trying to re-login to forums.  PM Alli if this happens a lot.')
-
     def login_to_forum(self):
         page_text = ''
 
-        self.log_login_attempt()
 
         page_request = self.session.post('https://forums.somethingawful.com/account.php',
                                          data={'action': 'login', 'username': settings.VF_SA_USER,
