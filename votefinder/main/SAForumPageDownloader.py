@@ -1,4 +1,5 @@
 import re
+import logging
 
 import requests
 
@@ -8,6 +9,7 @@ from django.conf import settings
 
 class SAForumPageDownloader():
     def __init__(self):
+        self.logger = logging.getLogger(__name__)
         self.session = requests.Session()
         self.session.headers.update({'User-Agent': 'Mozilla/5.0'})
         # we must set this, SA blocks the default UA
@@ -28,16 +30,19 @@ class SAForumPageDownloader():
         return None
 
     def login_to_forum(self):
-        page_text = ''
+        if settings.VF_SA_USER:
+            self.logger.info(f'Logging into Something Awful forums as user "{settings.VF_SA_USER}"...')
 
+            page_request = self.session.post('https://forums.somethingawful.com/account.php',
+                                             data={'action': 'login',
+                                                   'username': settings.VF_SA_USER,
+                                                   'password': settings.VF_SA_PASS,
+                                                   'secure_login': ''})
+            page_text = page_request.text
 
-        page_request = self.session.post('https://forums.somethingawful.com/account.php',
-                                         data={'action': 'login', 'username': settings.VF_SA_USER,
-                                               'password': settings.VF_SA_PASS, 'secure_login': ''})
-        page_text = page_request.text
+            if self.is_logged_in_correctly(page_text):
+                return True
 
-        if self.is_logged_in_correctly(page_text):
-            return True
         return False
 
     def needs_to_login(self, page_data):
