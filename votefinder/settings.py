@@ -161,15 +161,22 @@ if VF_LOG_FILE_PATH is not None and VF_LOG_LEVEL is not None:
                 'level': VF_LOG_LEVEL,
                 'class': 'logging.FileHandler',
                 'filename': VF_LOG_FILE_PATH,
+                'formatter': 'simple'
             },
         },
         'loggers': {
-            'django': {
+            '': {
                 'handlers': ['file'],
                 'level': VF_LOG_LEVEL,
                 'propagate': True,
             },
         },
+        'formatters': {
+            'simple': {
+                'format': '{name} {levelname} {asctime} {message}',
+                'style': '{',
+            },
+        }
     }
 
 PASSWORD_HASHERS = [
