@@ -13,7 +13,3 @@ urlpatterns = [
     path('', include(main_urls)),
 ]
 
-if settings.DEBUG:
-    urlpatterns += [
-        re_path(r'^static/(?P<path>.*)$', static.serve, {'document_root': settings.STATIC_ROOT}),
-    ]
