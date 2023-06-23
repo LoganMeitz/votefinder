@@ -80,6 +80,7 @@ FIXTURE_DIRS = ['votefinder/fixtures/']
 
 WEB_ROOT = 'votefinder/'
 STATIC_ROOT = 'votefinder/static/'
+STATIC_URL = 'static/'
 MEDIA_ROOT = ''
 
 LOGIN_URL = '/auth/login'
