@@ -212,3 +212,5 @@ INSTALLED_APPS = (
     'votefinder.main',
     'votefinder.vfauth',
 )
+
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
