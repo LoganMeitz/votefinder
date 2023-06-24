@@ -379,7 +379,7 @@ class UserProfile(models.Model):
     user = models.OneToOneField(User, related_name='profile', on_delete=models.CASCADE)
     registered = models.DateTimeField(auto_now_add=True)
     theme = models.ForeignKey(Theme, on_delete=models.SET_DEFAULT, default=1)
-    pronouns = models.TextField(blank=True)
+    pronouns = models.TextField(blank=True, null=True)
 
     def __str__(self):
         return self.player.name
