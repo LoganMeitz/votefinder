@@ -79,7 +79,9 @@ SITE_ID = 1
 FIXTURE_DIRS = ['votefinder/fixtures/']
 
 WEB_ROOT = 'votefinder/'
-STATIC_ROOT = 'votefinder/static/'
+STATIC_ROOT = env_string('VF_STATIC_ROOT', default="votefinder/static/")
+STATIC_URL = 'static/'
+STATICFILES_DIRS = env_string_list('VF_STATICFILES_DIRS', separator=' ', default=[])
 MEDIA_ROOT = ''
 
 LOGIN_URL = '/auth/login'
