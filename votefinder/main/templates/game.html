@@ -318,18 +318,18 @@ $(document).ready(function () {
                 : <input type="text" size="2" maxlength="2" id="deadlineMinute"
                          value="{{ deadline|time:"i" }}">
                 <select name="ampm" id="deadlineAmPm">
-                    <option value="AM"{% ifequal deadline|time:"A" "AM" %}
-                    selected="selected"{% endifequal %}>AM
+                    <option value="AM"{% if deadline|time:"A" == "AM" %}
+                    selected="selected"{% endif %}>AM
                     </option>
-                    <option value="PM"{% ifequal deadline|time:"A" "PM" %}
-                    selected="selected"{% endifequal %}>PM
+                    <option value="PM"{% if deadline|time:"A" == "PM" %}
+                    selected="selected"{% endif %}>PM
                     </option>
                 </select>
 
                 <select name="timezone" id="timezone">
                     {% for t in common_timezones %}
                     <option value="{{ t }}"
-                            {% ifequal t timezone %}selected="selected"{% endifequal %}>{{ t }}</option>
+                            {% if t == timezone %}selected="selected"{% endif %}>{{ t }}</option>
                     {% endfor %}
                 </select>
 
@@ -560,7 +560,7 @@ $(document).ready(function () {
                 <option value="{{ t.id }}"
                         {% if game.template == t or game.template == None and t.system_default %}
                         selected="selected"{% endif %}>
-                    {{ t.name }}{% ifnotequal t.creator user.profile.player %} (shared by {{ t.creator.name | safe }}){% endifnotequal %}
+                    {{ t.name }}{% if t.creator != user.profile.player %} (shared by {{ t.creator.name | safe }}){% endif %}
                     </option>
                 {% endfor %}
             </select>
@@ -762,7 +762,7 @@ $(document).ready(function () {
             <tr>
                 <td id="mod" class="playerList">
                     {% for p in game.moderators %}
-                        <div class="player{% ifequal p.player game.moderator %} creator{% endifequal %}"><a
+                        <div class="player{% if p.player == game.moderator %} creator{% endif %}"><a
                                 href="/p:{{ p.player.id }}">{{ p.player.name|safe }}</a></div>
                     {% endfor %}
                 </td>
