@@ -12,6 +12,7 @@
         profile</a>){% endif %}
     {% if user.is_authenticated %}
         (<a href="/players/common_games/{{user.profile.player.slug}}/{{player.slug}}">See games played with this player</a>)
+        {% if discord %}<p>Discord username: {{discord}} {% endif %}</p>
     {% endif %}
     {% if show_claim %}
     (<a href="/claim_player/{{player.id}}">Claim this player</a>)

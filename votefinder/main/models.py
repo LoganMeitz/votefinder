@@ -371,6 +371,7 @@ class UserProfile(models.Model):
     registered = models.DateTimeField(auto_now_add=True)
     theme = models.ForeignKey(Theme, on_delete=models.SET_DEFAULT, default=1)
     pronouns = models.TextField(blank=True, null=True)
+    discord_username = models.TextField(blank=True, null=True, max_length=32)
 
     def __str__(self):
         return self.player.name
