@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}{{ game.name|safe }}{% endblock %}
+
+
+{% block content %}
+    <h1><a href="/">Votefinder</a>: {{ game.name|safe }}</h1>
+    <div class="btn-group">
+        <a class="btn btn-sm btn-default" title="Open Thread" target="_blank"
+           href="{% if game.home_forum == 'sa' %}https://forums.somethingawful.com/showthread.php?threadid={{ game.thread_id }}{% elif game.home_forum == 'bnr' %}https://breadnroses.net/threads/{{ game.thread_id }}{% endif %}" id="liveThread"><i class="fa fa-link"></i></a>
+    </div>
+    <hr>
+
+    <p>
+    <table border="0" cellpadding="0.5em">
+        <tr>
+            <td>Moderator:</td>
+            <td><a href="{{ game.moderator.get_absolute_url }}">{{ game.moderator.name|safe }}</a></td>
+        </tr>
+        <tr>
+            <td>Thread ID:</td>
+            <td>{{ game.thread_id }}</td>
+        </tr>
+        <tr>
+            <td>
+                <br>
+                <p>This game's data is missing, broken or corrupt :(</p>
+                <p>A fix is coming for this, please watch warmly for updates</p>
+            </td>
+        </tr>
+    </table>
+
+<!-- DIALOG MODAL FOR MANUAL UPDATE -->
+    <div class="modal fade" id="dialog" tabindex="-1" role="dialog" aria-labelledby="dialog-label">
+      <div class="modal-dialog" role="document">
+          <div class="modal-content">
+              <div class="modal-header">
+                  <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                  <h4 class="modal-title" id="dialog-label">Updating Game</h4>
+              </div>
+          <div class="modal-body" id="dialog-content">
+              </div>
+          </div>
+        </div>
+    </div>
+
+{% endblock %}
