@@ -130,6 +130,13 @@ def game(request, slug):
     updates = GameStatusUpdate.objects.filter(game=game).order_by('-timestamp')
 
     gameday = game.days.select_related().last()
+
+    # detecting games that are missing posts
+    if gameday == None:
+        context = {'game': game, 'players': players, 'moderator': check_mod(request, game), 'form': form,
+               'comment_form': comment_form, 'broken': True}
+        return render(request, 'game_broken.html', context)
+
     manual_votes = Vote.objects.filter(game=game, manual=True, post__id__gte=gameday.start_post.id).order_by('id')
 
     if game.deadline:
@@ -155,7 +162,7 @@ def game(request, slug):
                'comment_form': comment_form, 'gameday': gameday, 'post_vc_button': post_vc_button,
                'nextDay': gameday.day_number + 1, 'deadline': deadline, 'templates': templates,
                'manual_votes': manual_votes, 'timezone': tzone, 'common_timezones': common_timezones,
-               'updates': updates, 'playerstate': player_state, 'faction_form': faction_form}
+               'updates': updates, 'playerstate': player_state, 'faction_form': faction_form, 'broken': False}
     return render(request, 'game.html', context)
 
 
