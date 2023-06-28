@@ -5,26 +5,26 @@
         <span class="input-group-addon" id="pagecount">Pages ({{ game.current_page }}):</span>
         <span class="input-group-btn">
       <button type="button" onclick="javascript:loadPage(1);" class="btn btn-xs" id="firstPage"
-              {% ifequal page 1 %}disabled="disabled"{% endifequal %} title="First Page">&laquo;
+              {% if page == 1 %}disabled="disabled"{% endif %} title="First Page">&laquo;
       </button>
         </span>
         <span class="input-group-btn">
       <button type="button" onclick="javascript:loadPage({{ prevPage }});" class="btn btn-xs" id="prevPage"
-              {% ifequal page 1 %}disabled="disabled"{% endifequal %} title="Previous Page">&lsaquo;
+              {% if page == 1 %}disabled="disabled"{% endif%} title="Previous Page">&lsaquo;
       </button>
         </span>
       {% spaceless %}<select id="pageJump" class="form-control">
           {% for p in pageNumbers %}
-              <option value="{{ p }}" {% ifequal p page %}selected="selected"{% endifequal %}>{{ p }}</option>
+              <option value="{{ p }}" {% if p == page %}selected="selected"{% endif %}>{{ p }}</option>
           {% endfor %}
       </select>{% endspaceless %}
         <span class="input-group-btn">
       <button type="button" onclick="javascript:loadPage({{ nextPage }});" class="btn btn-xs" id="nextPage"
-              {% ifequal page game.current_page %}disabled="disabled"{% endifequal %} title="Next Page">&rsaquo;</button>
+              {% if page == game.current_page %}disabled="disabled"{% endif %} title="Next Page">&rsaquo;</button>
       </span>
       <span class="input-group-btn">
       <button type="button" onclick="javascript:loadPage({{ game.max_pages }});" class="btn btn-xs" id="lastPage"
-              {% ifequal page game.current_page %}disabled="disabled"{% endifequal %} title="Last Page">&raquo;
+              {% if page game.current_page %}disabled="disabled"{% endif %} title="Last Page">&raquo;
       </button>
       </span>
     </div>
