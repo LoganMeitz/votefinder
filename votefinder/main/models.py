@@ -305,15 +305,6 @@ class Post(models.Model):
         return '{} at {}'.format(self.author.name, self.timestamp)
 
 
-class PrivMsg(models.Model):
-    game = models.ForeignKey(Game, related_name='pms', on_delete=models.CASCADE)
-    target = models.ForeignKey(Player, related_name='pms_received', on_delete=models.SET(get_default_player))
-    author = models.ForeignKey(Player, related_name='pms_sent', on_delete=models.SET(get_default_player))
-    subject = models.CharField(max_length=85)
-    icon = models.CharField(max_length=10)
-    sent = models.BooleanField(default=False)
-
-
 class Vote(models.Model):
     post = models.ForeignKey(Post, related_name='votes', db_index=True, on_delete=models.CASCADE)
     game = models.ForeignKey(Game, related_name='votes', db_index=True, on_delete=models.CASCADE)
@@ -379,7 +370,8 @@ class UserProfile(models.Model):
     user = models.OneToOneField(User, related_name='profile', on_delete=models.CASCADE)
     registered = models.DateTimeField(auto_now_add=True)
     theme = models.ForeignKey(Theme, on_delete=models.SET_DEFAULT, default=1)
-    pronouns = models.TextField()
+    pronouns = models.TextField(blank=True, null=True)
+    discord_username = models.TextField(blank=True, null=True, max_length=32)
 
     def __str__(self):
         return self.player.name

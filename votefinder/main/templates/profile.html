@@ -1,39 +1,8 @@
 {% extends "base.html" %}
 {% block title %}Votefinder: Your Profile{% endblock %}
-
-{% block onready %}
-    $.ajaxSetup({
-        headers: { "X-CSRFToken": Cookies.get("csrftoken") }
-    });
-    $("#theme-selector").on("change", function() {
-        $(this).prop("disabled", true);
-        $.post("/update_user_theme", {t: $(this).val()}) //TODO better path
-        .done(function() {
-            console.log($("#theme-selector option:selected").text())
-            $("#theme-css").attr("href", "/static/style-" + $("#theme-selector option:selected").text() + ".css");
-            $("#theme-selector").prop("disabled", false);
-        })
-        .fail(function() {
-            alert("Failed to contact the server. Please contact the developer.");
-            //TODO more elegant
-        });
-    });
-	$("#pronouns-submit").on('click', function() {
-		$(this).prop('disabled', true);
-		$('#pronouns').prop('disabled', true);
-		$.post("/update_user_pronouns", {p: $('#pronouns').val()})
-		.done(function() {
-		    $('#pronouns-submit').prop('disabled', false);
-		    $('#pronouns').prop('disabled', false);
-		})
-		.fail(function() {
-		    alert("Failed to contact the server. Please contact the developer.");
-		});
-	});
-{% endblock %}
-
 {% block content %}
     <h1><a href="/">Votefinder</a>: Profile: {{ player.name|safe }}</h1>
+    <p>Registered: {{ profile.registered }}</p>
     {% if player.sa_uid is not None %}
     (<a href="https://forums.somethingawful.com/member.php?action=getinfo&userid={{ player.sa_uid }}">jump to SA
     profile</a>)
@@ -42,40 +11,42 @@
     (<a href="https://breadnroses.net/members/{{ player.bnr_uid }}">jump to BNR
         profile</a>)
     {% endif %}
+    {% if player.bnr_uid is None or player.sa_uid is None %}
+    <p>Link New Forums Profile: </p>
+    <a href="/auth/link_profile">Click here</a>
+    {% endif %}
     <hr>
 
-    <p>
+    <form action="/update_user_profile/" method="POST">
+        {% csrf_token %}
     <table border="0" cellpadding="3" cellspacing="2">
-        {% if player.bnr_uid is None or player.sa_uid is None %}
-            <td>Link New Forums Profile: </td>
-            <td><a href="/auth/link_profile">Click here</a></td>
-        {% endif %}
         <tr>
-
-        </tr>
-        <tr>
-            <td>Registered:</td>
-            <td>{{ profile.registered }}</td>
-        </tr>
-        <tr>
-            <td>Change Password:</td>
-            <td><a href="/auth/password_change">Click here</a></td>
-        </tr>
-        <tr>
-            <td>Theme Select:</td>
-            <td><select class="form-control" id="theme-selector">
+            <td><label for="theme-selector">Theme</label></td>
+            <td><select class="form-control" id="theme-selector" name="theme_id">
                 {% for t in themes %}
                 <option value="{{ t.id }}" {% if t.id == profile.theme.id %} selected="selected" {% endif %}>{{ t.name }}</option>
                 {% endfor %}
                 </select></td>
 		</tr>
 		<tr>
-			<td>Pronouns:</td>
-			<td><input class="form-control" id="pronouns" value="{% if profile.pronouns %}{{ profile.pronouns }}{% endif %}" /></td>
-			<td><button class="form-control btn btn-info" id="pronouns-submit">Save</button></td>
-		</tr>			
-    </table></p>
-
+			<td><label for="pronouns">Pronouns</label></td>
+			<td><input class="form-control" id="pronouns" type="text" name="pronouns" value="{% if profile.pronouns %}{{ profile.pronouns }}{% endif %}" /></td>
+		</tr>
+        <tr>
+            <td><label for="discord-username">Discord username</label></td>
+            <td><input class="form-control" id="discord-username" type="text" name="discord_username" value="{% if profile.discord_username %}{{profile.discord_username}}{% endif %}"/></td>
+        </tr>
+        <tr>
+            <td>
+                <input type="submit" value="Update Profile">
+            </td>
+        </tr>		
+    </table>
+</form>
+<tr>
+    <td>Change Password:</td>
+    <td><a href="/auth/password_change">Click here</a></td>
+</tr>
     <hr>
 
     <p>Playing in games:

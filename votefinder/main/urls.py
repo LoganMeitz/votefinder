@@ -65,7 +65,6 @@ urlpatterns = [
     re_path(r'^votechart/(?P<gameslug>[\w-]+)$', views.votechart_all),
     re_path(r'^votechart/(?P<gameslug>[\w-]+)/(?P<playerslug>[\w-]+)$', views.votechart_player),
     path('gamechart/', views.gamechart),
-    path('update_user_theme', views.update_user_theme),
-    path('update_user_pronouns', views.update_user_pronouns),
+    path('update_user_profile/', views.update_user_profile),
     re_path(r'^players/common_games/(?P<slug_a>[\w-]+)/(?P<slug_b>[\w-]+)', views.common_games),
 ]

@@ -17,7 +17,7 @@ from django.db import connections
 from django.db.models import Max, Min, Q  # noqa: WPS347
 from django.http import (HttpResponse, HttpResponseForbidden,
                          HttpResponseNotFound, HttpResponseRedirect)
-from django.shortcuts import get_list_or_404, get_object_or_404, render
+from django.shortcuts import get_list_or_404, get_object_or_404, render, redirect
 from django.template.context_processors import csrf
 from PIL import Image, ImageDraw, ImageFont
 from votefinder.main.models import (AddCommentForm, AddFactionForm, AddPlayerForm,  # noqa: WPS235
@@ -196,23 +196,14 @@ def profile(request):
 
 
 @login_required
-def update_user_theme(request):
+def update_user_profile(request):
     if request.method == 'POST':
         profile = request.user.profile
-        theme_id = request.POST.get('t')
-        theme = Theme.objects.get(id=theme_id)
-        profile.theme = theme  # This might not work check it afterwards.
+        profile.theme = Theme.objects.get(id=request.POST['theme_id'])
+        profile.pronouns = request.POST['pronouns']
+        profile.discord_username = request.POST['discord_username']
         profile.save()
-        return HttpResponse(simplejson.dumps({'success': True}))
-
-
-def update_user_pronouns(request):
-    if request.method == 'POST':
-        profile = request.user.profile
-        pronouns = request.POST.get('p')
-        profile.pronouns = pronouns
-        profile.save()
-        return HttpResponse(simplejson.dumps({'success': True}))
+    return redirect('/profile')
 
 
 def player(request, slug):
@@ -229,8 +220,10 @@ def player(request, slug):
     try:
         profile = UserProfile.objects.get(player=player)
         pronouns = profile.pronouns
+        discord = profile.discord_username
     except UserProfile.DoesNotExist:
         pronouns = None
+        discord = None
         if request.user.is_authenticated and ((player.bnr_uid is not None and player.sa_uid is None and request.user.profile.player.bnr_uid is None) or (player.sa_uid is not None and player.bnr_uid is None and request.user.profile.player.sa_uid is None)):
             show_claim = True
 
@@ -239,7 +232,7 @@ def player(request, slug):
         show_delete = True
 
     return render(request, 'player.html',
-                  {'player': player, 'games': games, 'aliases': aliases, 'show_delete': show_delete, 'pronouns': pronouns, 'show_claim': show_claim})
+                  {'player': player, 'games': games, 'aliases': aliases, 'show_delete': show_delete, 'pronouns': pronouns, 'show_claim': show_claim, 'discord': discord})
 
 
 @login_required
