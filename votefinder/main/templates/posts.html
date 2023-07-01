@@ -24,7 +24,7 @@
       </span>
       <span class="input-group-btn">
       <button type="button" onclick="javascript:loadPage({{ game.max_pages }});" class="btn btn-xs" id="lastPage"
-              {% if page game.current_page %}disabled="disabled"{% endif %} title="Last Page">&raquo;
+              {% if page == game.current_page %}disabled="disabled"{% endif %} title="Last Page">&raquo;
       </button>
       </span>
     </div>
