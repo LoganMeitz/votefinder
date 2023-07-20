@@ -894,12 +894,12 @@ def votecount_image(request, slug):
 
     if img_dict is None:
         game = check_update_game(game)
-        img = Image.new('RGBA', (800, 1024), (255, 255, 255, 0))
+        img = Image.new('RGB', (800, 1024), (255, 255, 255))
         (width, height) = votecount_to_image(img, game, 0, 0, 800)
         img = img.crop((0, 0, width, height))
         cache.set(key, {'size': img.size, 'data': img.tobytes()}, 120)
     else:
-        img = Image.frombytes('RGBA', img_dict['size'], img_dict['data'])
+        img = Image.frombytes('RGB', img_dict['size'], img_dict['data'])
 
     response = HttpResponse(content_type='image/png')
     img.save(response, 'PNG')  # transparency=(255, 255, 255))

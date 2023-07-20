@@ -65,7 +65,7 @@ def draw_votecount_text(draw, vc, xpos, ypos, max_width, font, bold_font):
         pct = float(line_again['count']) / vc.toexecute
         box_width = min(pct * longest_name, longest_name)
         draw.rectangle([longest_name - box_width, ypos, longest_name, this_size_y + ypos],
-                       fill=(int(155 + (pct * 100)), 100, 100, int(pct * 255)))
+                       fill=(int(155 + (pct * 100)), 100, 100, 0))
 
         text = '{} ({})'.format(line_again['target'].name, line_again['count'])
         (x_size1, y_bottom1) = draw_wordwrap_text(draw, text, longest_name - line_again['size'], ypos, max_width, bold_font)
@@ -83,7 +83,7 @@ def draw_votecount_text(draw, vc, xpos, ypos, max_width, font, bold_font):
 
 
 def draw_wordwrap_text(draw, text, xpos, ypos, max_width, font):
-    fill = (0, 0, 0, 255)
+    fill = (0, 0, 0, 0)
     used_width = 0
     max_width -= xpos
     space_width, space_height = draw.textsize(' ', font=font)
