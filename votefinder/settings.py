@@ -68,8 +68,8 @@ VF_SA_DISCORD_CHANNEL = env_string('VF_SA_DISCORD_CHANNEL')
 VF_BNR_API_KEY = env_string('VF_BNR_API_KEY')
 
 # Fonts used in vote image generation
-VF_REGULAR_FONT_PATH = 'votefinder/static/MyriadPro-Regular.otf'
-VF_BOLD_FONT_PATH = 'votefinder/static/MyriadPro-Bold.otf'
+VF_REGULAR_FONT_PATH = 'votefinder/main/static/votefinder/MyriadPro-Regular.otf'
+VF_BOLD_FONT_PATH = 'votefinder/main/static/votefinder/MyriadPro-Bold.otf'
 
 # --------------------------------------------------------------------------------
 # From here on, it's settings interpreted directly by Django. Many of them are set from settings read from the environment above,
