@@ -4,5 +4,5 @@ from django.conf import settings
 register = template.Library()
 
 @register.simple_tag
-def get_settings_value(setting):
+def access_settings(setting):
     return getattr(settings, setting, "")
