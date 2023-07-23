@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load access_settings %}
 {% block title %}{{ game.name|safe }}{% endblock %}
 
 {% block script %}
@@ -48,7 +49,7 @@ $(document).ready(function () {
     });
 
     $('#voteImgButton').click(function () {
-        prompt("Copy and paste the following BBCode to make an auto-updating votecount image:", "[url=https://votefinder.org{{ game.get_absolute_url }}#votecount][img]https://votefinder.org/img/{{ game.slug }}[/img][/url]");
+        prompt("Copy and paste the following BBCode to make an auto-updating votecount image:", "[url=https://{% access_settings "VF_PRIMARY_DOMAIN" %}{{ game.get_absolute_url }}#votecount][img]https://{% access_settings "VF_PRIMARY_DOMAIN" %}/img/{{ game.slug }}[/img][/url]");
     });
     $('.button').button();
     $('#refreshbutton').button();
