@@ -19,11 +19,11 @@ class BNRApi():
         return page_data
 
     def get_thread(self, threadid, page=1):
-        thread = self.session.get('https://breadnroses.net/api/threads/{}?with_posts=true&page={}'.format(threadid, page))
+        thread = self.session.get(f'https://breadnroses.net/api/threads/{threadid}?with_posts=true&page={page}')
         return json.loads(thread.text)
 
     def get_games(self, page=1):
-        games = self.session.get('https://breadnroses.net/api/forums/35?with_threads=true&page={}'.format(page))
+        games = self.session.get(f'https://breadnroses.net/api/forums/35?with_threads=true&page={page}')
         return json.loads(games.text)
 
     def perform_download(self, page):
@@ -41,12 +41,12 @@ class BNRApi():
         self.session.post(post_url, data=inputs)
 
     def get_user_by_name(self, username):
-        user = self.session.get('https://breadnroses.net/api/users/find-name?username={}'.format(username))
+        user = self.session.get(f'https://breadnroses.net/api/users/find-name?username={username}')
         users = json.loads(user.text)
         return users['exact']
 
     def get_user_by_id(self, uid):
-        user = self.session.get('https://breadnroses.net/api/users/{}'.format(uid))
+        user = self.session.get(f'https://breadnroses.net/api/users/{uid}')
         user_json = json.loads(user.text)
         return user_json['user']
 

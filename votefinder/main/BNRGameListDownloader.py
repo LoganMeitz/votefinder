@@ -26,7 +26,7 @@ class BNRGameListDownloader():
         for thread in threads:
             thread_title = thread['title']
             if thread_title.lower().find('mafia') != -1 and thread_title.lower().find('werewolf') != 1:
-                game = {'name': thread_title, 'url': 'https://breadnroses.net/threads/{}'.format(thread['thread_id']), 'home_forum': 'bnr', 'threadid': thread['thread_id'], 'tracked': self.is_game_tracked(thread['thread_id'])}
+                game = {'name': thread_title, 'url': f'https://breadnroses.net/threads/{thread["thread_id"]}', 'home_forum': 'bnr', 'threadid': thread['thread_id'], 'tracked': self.is_game_tracked(thread['thread_id'])}
                 self.GameList.append(game)
 
         return True
