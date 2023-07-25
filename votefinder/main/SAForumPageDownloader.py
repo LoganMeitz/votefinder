@@ -65,7 +65,7 @@ class SAForumPageDownloader():
             return None
 
     def reply_to_thread(self, thread, message):
-        get_url = 'https://forums.somethingawful.com/newreply.php?action=newreply&threadid={}'.format(thread)
+        get_url = f'https://forums.somethingawful.com/newreply.php?action=newreply&threadid={thread}'
         post_url = 'https://forums.somethingawful.com/newreply.php?action=newreply'
 
         page_data = self.download(get_url)

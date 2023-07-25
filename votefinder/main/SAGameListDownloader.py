@@ -23,7 +23,7 @@ class SAGameListDownloader():
 
     def download_list(self, page):
         return self.downloader.download(
-            'https://forums.somethingawful.com/forumdisplay.php?forumid=103&pagenumber={}'.format(page))
+            f'https://forums.somethingawful.com/forumdisplay.php?forumid=103&pagenumber={page}')
 
     def parse_game_list(self, game_raw_html):
         soup = BeautifulSoup(game_raw_html, 'html.parser')

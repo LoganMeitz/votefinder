@@ -69,7 +69,7 @@ class SpecificGameStatusRss(Feed):
     title = 'Votefinder Game Status Updates'
     link = f'https://{settings.VF_PRIMARY_DOMAIN}/'
     author_name = 'Votefinder Team'
-    feed_url = '{}game_status'.format(link)
+    feed_url = f'{link}game_status'
     description = 'Game status updates for games tracked by Votefinder.'
     guid = '/'
     game = None
@@ -83,7 +83,7 @@ class SpecificGameStatusRss(Feed):
 
     def item_title(self, item):  # noqa: WPS110
         if item.game:
-            return '[{}] {}'.format(item.game.name, item.message)
+            return f'[{item.game.name}] {item.message}'
         return item.message
 
     def item_description(self, item):  # noqa: WPS110
