@@ -97,7 +97,7 @@ class VotecountFormatter:
 
     def build_ticks(self, ticked, total):
         return ''.join(
-            ['[img]{}[/img]'.format(self.empty_tick if iterator < (total - ticked) else self.tick) for iterator in range(0, total)])
+            [f'[img]{self.empty_tick if iterator < (total - ticked) else self.tick}[/img]' for iterator in range(0, total)])
 
     def convert_bbcode_to_html(self, bbcode):
         bbcode_votecount = bbcode

@@ -141,7 +141,7 @@ class BNRPageParser:
         for quote in post.bodySoup.findAll('blockquote'):
             quote.name = 'div'
             quote['class'] = 'quote well'
-        [img.replaceWith('<div class="embedded-image not-loaded" data-image="{}">Click to load image...</div>'.format(img['src'])) for img in post.bodySoup.find_all('img')]  # noqa: WPS428 false positive
+        [img.replaceWith(f'<div class="embedded-image not-loaded" data-image="{img["src"]}">Click to load image...</div>') for img in post.bodySoup.find_all('img')]  # noqa: WPS428 false positive
         post.body = post.bodySoup.prettify(formatter=None)
         post.timestamp = datetime.fromtimestamp(node['post_date'])
 

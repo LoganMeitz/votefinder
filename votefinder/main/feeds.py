@@ -7,9 +7,9 @@ from votefinder.main.models import BlogPost, Game, GameStatusUpdate
 
 class LatestRss(Feed):
     title = 'Votefinder Updates'
-    link = 'https://{}/'.format(settings.VF_PRIMARY_DOMAIN)
+    link = f'https://{settings.VF_PRIMARY_DOMAIN}/'
     author_name = 'Votefinder Team'
-    feed_url = '{}rss'.format(link)
+    feed_url = f'{link}rss'
     description = 'Changes and updates to the Votefinder site.'
     guid = '/'
 
@@ -23,7 +23,7 @@ class LatestRss(Feed):
         return item.text
 
     def item_link(self, item):  # noqa: WPS110
-        return 'https://{}/'.format(settings.VF_PRIMARY_DOMAIN)
+        return f'https://{settings.VF_PRIMARY_DOMAIN}/'
 
     def item_pubdate(self, item):  # noqa: WPS110
         return item.timestamp
@@ -36,9 +36,9 @@ class LatestAtom(LatestRss):
 
 class GameStatusRss(Feed):
     title = 'Votefinder Game Status Updates'
-    link = 'https://{}/'.format(settings.VF_PRIMARY_DOMAIN)
+    link = f'https://{settings.VF_PRIMARY_DOMAIN}/'
     author_name = 'Votefinder Team'
-    feed_url = '{}game_status'.format(link)
+    feed_url = f'{link}game_status'
     description = 'Game status updates for games tracked by Votefinder.'
     guid = '/'
 
@@ -47,7 +47,7 @@ class GameStatusRss(Feed):
 
     def item_title(self, item):  # noqa: WPS110
         if item.game:
-            return '[{}] {}'.format(item.game.name, item.message)
+            return f'[{item.game.name}] {item.message}'
         return item.message
 
     def item_description(self, item):  # noqa: WPS110
@@ -67,9 +67,9 @@ class GameStatusAtom(GameStatusRss):
 
 class SpecificGameStatusRss(Feed):
     title = 'Votefinder Game Status Updates'
-    link = 'https://{}/'.format(settings.VF_PRIMARY_DOMAIN)
+    link = f'https://{settings.VF_PRIMARY_DOMAIN}/'
     author_name = 'Votefinder Team'
-    feed_url = '{}game_status'.format(link)
+    feed_url = f'{link}game_status'
     description = 'Game status updates for games tracked by Votefinder.'
     guid = '/'
     game = None
@@ -83,7 +83,7 @@ class SpecificGameStatusRss(Feed):
 
     def item_title(self, item):  # noqa: WPS110
         if item.game:
-            return '[{}] {}'.format(item.game.name, item.message)
+            return f'[{item.game.name}] {item.message}'
         return item.message
 
     def item_description(self, item):  # noqa: WPS110
