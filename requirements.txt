@@ -3,7 +3,7 @@ Django>=3.0.12
 html5lib>=1.0.1
 mysqlclient>=1.4.6
 parsedatetime==2.6
-Pillow==9.5.0
+Pillow>=10.0.0
 pytz>=2020.1
 requests>=2.24.0
 simplejson>=3.16.0

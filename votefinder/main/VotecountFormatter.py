@@ -7,6 +7,8 @@ from pytz import timezone
 from django.conf import settings
 from django.utils.dateformat import format
 from django.utils.timesince import timeuntil
+from django.template import Template, Context
+
 from votefinder.main.models import Comment, VotecountTemplate
 
 from votefinder.main import VoteCounter
@@ -21,15 +23,16 @@ class VotecountFormatter:
         self.game = game
 
     def go(self, show_comment=True):
+        # Pull together all data needed to determine vote state for game
         self.counted_votes = self.vc.run(self.game)
 
-        game_template = self.game.template
-        if game_template is None:
-            game_template = VotecountTemplate.objects.get(system_default=True)
+        self.game_template = self.game.template
+        if self.game_template is None:
+            self.game_template = VotecountTemplate.objects.get(system_default=True)
 
-        gameday = self.game.days.select_related().last()
+        self.gameday = self.game.days.select_related().last()
         living_players = [ps.player for ps in self.game.living_players()]
-        alive = len(living_players)
+
         if self.game.deadline:
             tz = timezone(self.game.timezone)
             dl = timezone(settings.TIME_ZONE).localize(self.game.deadline).astimezone(tz)
@@ -40,74 +43,119 @@ class VotecountFormatter:
             deadline = ''
             until_deadline = ''
 
-        self.toexecute = self.to_execute(alive)
-        detail_level = game_template.detail_level
-        self.tick = game_template.full_tick
-        self.empty_tick = game_template.empty_tick
-        comments = Comment.objects.filter(game=self.game).order_by('-timestamp') if show_comment else ''
-
-        votecount_lines = []
-        for votecount_by_player in self.counted_votes:
-            if votecount_by_player['count'] == 0 and game_template.hide_zero_votes:
-                continue
-
-            if votecount_by_player['votes']:
-                votelist = []
-                for vote in votecount_by_player['votes']:
-                    thisvote = None
-                    if vote['unvote']:
-                        if detail_level == 3:
-                            thisvote = ''.join(
-                                [game_template.before_unvote, str(vote['author'].name), game_template.after_unvote])
-                    elif vote['enabled']:
-                        thisvote = ''.join([game_template.before_vote, str(vote['author'].name), game_template.after_vote])
-                    elif detail_level >= 2:
-                        thisvote = ''.join(
-                            [game_template.before_unvoted_vote, str(vote['author'].name), game_template.after_unvoted_vote])
-
-                    if thisvote:
-                        votelist.append(thisvote.replace('{{url}}', vote['url']))
-
-                if votelist:
-                    this_line = game_template.single_line.replace('{{target}}', str(votecount_by_player['target'].name)).replace(
-                        '{{count}}', str(votecount_by_player['count'])).replace('{{votelist}}', ', '.join(votelist))
-                    votecount_lines.append(
-                        this_line.replace('{{ticks}}', self.build_ticks(votecount_by_player['count'], self.toexecute)))
+        self.to_execute = int(math.floor(len(living_players)/ 2.0) + 1)
+        self.detail_level = self.game_template.detail_level
+        self.tick = self.game_template.full_tick
+        self.empty_tick = self.game_template.empty_tick
+        self.comments = Comment.objects.filter(game=self.game).order_by('-timestamp') if show_comment else ''
 
         self.not_voting_list = sorted(
             filter(lambda player: self.vc.currentVote[player] is None and player in living_players, self.vc.currentVote),
             key=lambda player: player.name.lower())
-        temp_not_voting = game_template.single_line.replace('{{target}}', 'Not Voting').replace('{{count}}', str(
-            len(self.not_voting_list))).replace('{{ticks}}', self.build_ticks(0, self.toexecute))
 
-        temp_overall = game_template.overall.replace('{{votecount}}', '\n'.join(votecount_lines))
-        temp_overall = temp_overall.replace('{{deadline}}', game_template.deadline_exists if self.game.deadline else game_template.deadline_not_set)
-        temp_overall = temp_overall.replace('{{notvoting}}', temp_not_voting.replace('{{votelist}}', ', '.join(
-            map(lambda not_voting_player: not_voting_player.name, self.not_voting_list))))
+        self.game_state = {
+            'gameday': self.gameday.day_number,
+            'players': len(living_players),
+            'to_execute': self.to_execute,
+            'votecounts_by_player': [],
+            'not_voting': [x.name for x in self.not_voting_list],
+            'deadline': deadline,
+            'until_deadline': until_deadline
+        }
 
-        if comments:
-            temp_overall += '\n \n' + '\n \n'.join([comment.comment for comment in comments])  # noqa: WPS336
+        for vc in self.counted_votes:
+            new_player = {'player_name': vc['target'].name, 'votes_received': int(vc['count']), 'votes': []}
+            for vote in vc['votes']:
+                vote['author'] = vote['author'].name
+                new_player['votes'].append(vote)
+            if len(new_player['votes']) == 0 and self.game_template.hide_zero_votes:
+                continue
+            else:
+                self.game_state['votecounts_by_player'].append(new_player)
 
-        self.bbcode_votecount = temp_overall.replace('{{deadline}}', str(deadline)).replace('{{timeuntildeadline}}', until_deadline).replace('{{day}}', str(gameday.day_number)).replace('{{tolynch}}', str(self.toexecute)).replace('{{alive}}', str(alive))
+    def get_bbcode(self):
+        game_template = Template(self.game_template.overall)
+        
+        # Get together individual votecount lines
+        votecount = ""
+        template_single_line = Template(self.game_template.single_line + "\n")
+        for x in self.game_state['votecounts_by_player']:
+            votelist = []
+            for vote in x['votes']:
+                if vote['unvote'] == True:
+                    votelist.append(f"[s]{vote['author']}[/s]")
+                elif vote['enabled'] == True:
+                    votelist.append(f"[url={vote['url']}]{vote['author']}[/url]")
+                else:
+                    votelist.append(f"{vote['author']}")
 
-        self.html_votecount = self.convert_bbcode_to_html(self.bbcode_votecount)
+            votelist_string = ', '.join(votelist)
 
-    def to_execute(self, count):
-        return int(math.floor(count / 2.0) + 1)
+            ticks = (f"[img]{self.game_template.empty_tick}[/img]" * (self.to_execute - x['votes_received'])) + f"[img]{self.game_template.full_tick}[/img]" * x['votes_received']
 
-    def build_ticks(self, ticked, total):
-        return ''.join(
-            [f'[img]{self.empty_tick if iterator < (total - ticked) else self.tick}[/img]' for iterator in range(0, total)])
+            votecount += template_single_line.render(context = Context({'ticks': ticks,'target': x['player_name'], 'count': x['votes_received'], 'votelist': votelist_string}))
 
-    def convert_bbcode_to_html(self, bbcode):
-        bbcode_votecount = bbcode
+        # Figure out deadline
+        if self.game_state['deadline'] == '':
+            deadline = self.game_template.deadline_not_set
+        else:
+            deadline = Template(self.game_template.deadline_exists).render(Context({
+                'deadline': self.game_state['deadline'],
+                'timeuntildeadline': self.game_state['until_deadline']
+            }))
 
-        html_votecount = bbcode_votecount.replace('\n', '<br />\n').replace('[b]', '<b>').replace('[/b]', '</b>').replace('[i]', '<i>')
-        html_votecount = html_votecount.replace('[/i]', '</i>').replace('[u]', '<u>').replace('[/u]', '</u>').replace('[super]', '<sup>')
-        html_votecount = html_votecount.replace('[/super]', '</sup>').replace('[sub]', '<sub>').replace('[/sub]', '</sub>').replace('[s]', '<del>')
-        html_votecount = html_votecount.replace('[/s]', '</del>').replace('[list]', '<list>').replace('[/list]', '</list><br/>').replace('[*]', '<li>')
+        return game_template.render(context = Context({
+            'day': self.game_state['gameday'],
+            'votecount': votecount,
+            'notvoting': f"Not voting: {', '.join(self.game_state['not_voting'])}" if len(self.game_state['not_voting']) != 0 else '',
+            'alive': self.game_state['players'],
+            'tolynch': self.game_state['to_execute'],
+            'deadline': deadline
+        }))
 
-        html_votecount = re.compile(r'\[img\](.*?)\[/img\]', re.I | re.S).sub(r'<img src="\1">', html_votecount)
-        html_votecount = re.compile(r'\[url=(.*?)\](.*?)\[/url\]', re.I | re.S).sub(r'<u><a href="\1">\2</a></u>', html_votecount)
+    def get_html(self):
 
-        return html_votecount  # noqa: WPS331 more confusing without the variable, promise
+        # game_template = Template("{% autoescape off %}" + self.game_template.overall + "{% endautoescape %}")
+
+        game_template = Template(self.game_template.overall)
+        
+        # Get together individual votecount lines
+        votecount = ""
+        # template_single_line = Template(self.game_template.single_line + "\n")
+
+        template_single_line = Template("{% autoescape off %}" + self.game_template.single_line + "{% endautoescape %}" + "\n")
+
+        for x in self.game_state['votecounts_by_player']:
+            votelist = []
+            for vote in x['votes']:
+                if vote['unvote'] == True:
+                    votelist.append(f"<del>{vote['author']}</del>")
+                elif vote['enabled'] == True:
+                    votelist.append(f"<u><a href='{vote['url']}'>{vote['author']}</a></u>")
+                else:
+                    votelist.append(f"{vote['author']}")
+
+            votelist_string = ', '.join(votelist)
+
+            ticks = (f"<img src='{self.game_template.empty_tick}'/>" * (self.to_execute - x['votes_received'])) + f"<img src='{self.game_template.full_tick}'/>" * x['votes_received']
+
+            votecount += template_single_line.render(context = Context({'ticks': ticks,'target': x['player_name'], 'count': x['votes_received'], 'votelist': votelist_string}))
+
+        # Figure out deadline
+        if self.game_state['deadline'] == '':
+            deadline = self.game_template.deadline_not_set
+        else:
+            deadline = Template(self.game_template.deadline_exists).render(Context({
+                'deadline': self.game_state['deadline'],
+                'timeuntildeadline': self.game_state['until_deadline']
+            }))
+
+        return game_template.render(context = Context({
+            'day': self.game_state['gameday'],
+            'votecount': votecount,
+            'notvoting': f"Not voting: {', '.join(self.game_state['not_voting'])}" if len(self.game_state['not_voting']) != 0 else '',
+            'alive': self.game_state['players'],
+            'tolynch': self.game_state['to_execute'],
+            'deadline': deadline
+        }))
+
