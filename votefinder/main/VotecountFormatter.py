@@ -26,6 +26,9 @@ class VotecountFormatter:
         # Pull together all data needed to determine vote state for game
         self.counted_votes = self.vc.run(self.game)
 
+        # Getting game template - this is going to be heavily reworked,
+        # when we do that, make sure to pay close attention to anything
+        # referring to templates
         self.game_template = self.game.template
         if self.game_template is None:
             self.game_template = VotecountTemplate.objects.get(system_default=True)
@@ -53,6 +56,8 @@ class VotecountFormatter:
             filter(lambda player: self.vc.currentVote[player] is None and player in living_players, self.vc.currentVote),
             key=lambda player: player.name.lower())
 
+        # Initial creation of game_state dict - more data populated in
+        # next section
         self.game_state = {
             'gameday': self.gameday.day_number,
             'players': len(living_players),
@@ -63,9 +68,11 @@ class VotecountFormatter:
             'until_deadline': until_deadline
         }
 
+        # Creating votecount for each player
         for vc in self.counted_votes:
             new_player = {'player_name': vc['target'].name, 'votes_received': int(vc['count']), 'votes': []}
             for vote in vc['votes']:
+                # We want a plaintext name, not a Player object
                 vote['author'] = vote['author'].name
                 new_player['votes'].append(vote)
             if len(new_player['votes']) == 0 and self.game_template.hide_zero_votes:
@@ -73,6 +80,8 @@ class VotecountFormatter:
             else:
                 self.game_state['votecounts_by_player'].append(new_player)
 
+    # It might be nice to replace this with another inclusion tag, like how
+    # the HTML votecount is generated - this works for now, though
     def get_bbcode(self):
         game_template = Template(self.game_template.overall)
         
@@ -92,52 +101,6 @@ class VotecountFormatter:
             votelist_string = ', '.join(votelist)
 
             ticks = (f"[img]{self.game_template.empty_tick}[/img]" * (self.to_execute - x['votes_received'])) + f"[img]{self.game_template.full_tick}[/img]" * x['votes_received']
-
-            votecount += template_single_line.render(context = Context({'ticks': ticks,'target': x['player_name'], 'count': x['votes_received'], 'votelist': votelist_string}))
-
-        # Figure out deadline
-        if self.game_state['deadline'] == '':
-            deadline = self.game_template.deadline_not_set
-        else:
-            deadline = Template(self.game_template.deadline_exists).render(Context({
-                'deadline': self.game_state['deadline'],
-                'timeuntildeadline': self.game_state['until_deadline']
-            }))
-
-        return game_template.render(context = Context({
-            'day': self.game_state['gameday'],
-            'votecount': votecount,
-            'notvoting': f"Not voting: {', '.join(self.game_state['not_voting'])}" if len(self.game_state['not_voting']) != 0 else '',
-            'alive': self.game_state['players'],
-            'tolynch': self.game_state['to_execute'],
-            'deadline': deadline
-        }))
-
-    def get_html(self):
-
-        # game_template = Template("{% autoescape off %}" + self.game_template.overall + "{% endautoescape %}")
-
-        game_template = Template(self.game_template.overall)
-        
-        # Get together individual votecount lines
-        votecount = ""
-        # template_single_line = Template(self.game_template.single_line + "\n")
-
-        template_single_line = Template("{% autoescape off %}" + self.game_template.single_line + "{% endautoescape %}" + "\n")
-
-        for x in self.game_state['votecounts_by_player']:
-            votelist = []
-            for vote in x['votes']:
-                if vote['unvote'] == True:
-                    votelist.append(f"<del>{vote['author']}</del>")
-                elif vote['enabled'] == True:
-                    votelist.append(f"<u><a href='{vote['url']}'>{vote['author']}</a></u>")
-                else:
-                    votelist.append(f"{vote['author']}")
-
-            votelist_string = ', '.join(votelist)
-
-            ticks = (f"<img src='{self.game_template.empty_tick}'/>" * (self.to_execute - x['votes_received'])) + f"<img src='{self.game_template.full_tick}'/>" * x['votes_received']
 
             votecount += template_single_line.render(context = Context({'ticks': ticks,'target': x['player_name'], 'count': x['votes_received'], 'votelist': votelist_string}))
 

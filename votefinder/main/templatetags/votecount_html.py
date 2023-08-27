@@ -1,12 +1,9 @@
 from django import template
-from django.utils.safestring import mark_safe
-from django.utils.safestring import SafeString
 
 register = template.Library()
 
-@register.simple_tag
+@register.inclusion_tag("votecount.html")
 def votecount_html(vc):
-    result = mark_safe(vc.get_html())
-    print(result)
-    print(isinstance(result, SafeString))
-    return result
+    print(vc.game_state)
+    return vc.game_state
+
