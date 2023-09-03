@@ -47,6 +47,8 @@ def votecount_to_image(game):
 
     # split the votecounts dictionary into a list of tuples - index 0 of the
     # tuple is the name of the voted player, index 1 is the list of votes
+    # total height is us keeping track of how tall the resuling image
+    # should be - we need this to create the blank image later
 
     vote_images = []
     total_height = 0
@@ -61,7 +63,7 @@ def votecount_to_image(game):
     if game_state['deadline'] != '':
         footer_text += f"\nThe current deadline is {game_state['deadline']} - that's in about {game_state['until_deadline']}."
 
-
+    # determining the height of the header and footer text
     header_height = dummy_draw.multiline_textbbox(
             (0,0),
             header_text,
@@ -74,7 +76,8 @@ def votecount_to_image(game):
             font=regular_font
         )[3]
 
-    # the 32 here gives 16 pixels of space around the votes
+    # the 32 here gives 16 pixels of space above and below the votes - a margin
+    # for readability purposes
     total_height = total_height + header_height + footer_height + 32
 
     # Actual image creation follows
@@ -84,6 +87,8 @@ def votecount_to_image(game):
     draw = ImageDraw.Draw(img)
 
     # cursor values to keep track of where we should be drawing on our image
+    # cursor_x doesn't actually change at any point, but the purpose of
+    # the code is clearer with it
     cursor_x = 8
     cursor_y = 8
 
@@ -118,13 +123,10 @@ def draw_votecount_names(game_state, votecounts):
         draw = ImageDraw.Draw(img)
         draw.text((0,0), text=text, font=regular_font, fill=(0,0,0))
 
-        # add image to votecounts
         votecounts[votecount['player_name']] = [img, None]        
 
-        # keep track of largest name found
         max_player_name_width = max(max_player_name_width, right)
 
-    # print(votecounts)
     return max_player_name_width
 
 def draw_vote_list(game_state, votecounts, max_player_name_width):
@@ -137,18 +139,6 @@ def draw_vote_list(game_state, votecounts, max_player_name_width):
             n['enabled'] == True and n['unvote'] == False
         ]
 
-        # testing: adding extra names
-        # don't forget to delete these when you're done
-        player_names.append('aaaaaa')
-        player_names.append('bbbbbb')
-        player_names.append('cccccccccccccc')
-        player_names.append('dddd ddddd ddddddd')
-        player_names.append('eeeeeeeeeeeee eeeeeeeeeeee')
-        player_names.append('ff ff ff')
-        player_names.append('gggg ggg ggggg')
-
-        # print("appended all extra names")
-
         player_names_text = player_names[0]
 
         _, _, _, text_height = dummy_draw.multiline_textbbox(
@@ -156,29 +146,25 @@ def draw_vote_list(game_state, votecounts, max_player_name_width):
                 player_names[0],
                 font=regular_font
             )
-        # not sure if this needs stroke width
+
+        # we start iteration at 1 because we've already figured the bounding
+        # box with the first player name present
         for p in player_names[1:len(player_names)]:
-            # print(f'appending {p} to image for {votecount["player_name"]}')
             _, _, right, bottom = dummy_draw.multiline_textbbox(
                 (0,0),
                 player_names_text + f', {p}',
                 font=regular_font
             )
-            # print(f'bounding box: {left, top, right, bottom}')
             if right > max_width:
-                # print(f'new bottom is {text_height}')
                 text_height += bottom
-                # print(f'{right} > {max_width} when adding {p}')
                 player_names_text += f',\n{p}'
             else:
                 player_names_text += f', {p}'
             
-            # print(player_names_text)
             
 
         # the + 4 to text height is to insure things like the tails of 
-        # characters like 'g' don't accidentally get cropped - there might be
-        # a better way of doing this
+        # characters like 'g' don't accidentally get cropped
         votes_image = Image.new('RGB', (max_width, text_height + 4), (255, 255, 255))
         votes_draw = ImageDraw.Draw(votes_image)
         votes_draw.multiline_text(
@@ -189,7 +175,3 @@ def draw_vote_list(game_state, votecounts, max_player_name_width):
             )
 
         votecounts[votecount['player_name']][1] = votes_image
-
-        # votes_image.show()
-        
-        # print(f"{votecount['player_name']} votes: {player_names}")
