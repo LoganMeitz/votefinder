@@ -121,7 +121,7 @@ def draw_votecount_names(game_state, votecounts):
         _, _, right, bottom = dummy_draw.textbbox((0,0), text=text, font=bold_font)
         img = Image.new('RGB', (right, bottom), (255, 255, 255))
         draw = ImageDraw.Draw(img)
-        draw.text((0,0), text=text, font=regular_font, fill=(0,0,0))
+        draw.text((0,0), text=text, font=bold_font, fill=(0,0,0))
 
         votecounts[votecount['player_name']] = [img, None]        
 
