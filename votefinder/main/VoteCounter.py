@@ -78,7 +78,7 @@ class VoteCounter:
         vc_formatter = VotecountFormatter.VotecountFormatter(game)
         vc_formatter.go()
         message = f'{message}\n\n'
-        message += vc_formatter.bbcode_votecount
+        message += vc_formatter.get_bbcode()
         if game.home_forum == 'sa':
             message = f':redhammer: {message}'
             dl = SAForumPageDownloader.SAForumPageDownloader()

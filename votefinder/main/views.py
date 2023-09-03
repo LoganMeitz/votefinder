@@ -1048,7 +1048,7 @@ def post_vc(request, gameid):
             dl = SAForumPageDownloader.SAForumPageDownloader()
         elif game.home_forum == 'bnr':
             dl = BNRApi.BNRApi()
-        dl.reply_to_thread(game.thread_id, vc_formatter.bbcode_votecount)
+        dl.reply_to_thread(game.thread_id, vc_formatter.get_bbcode())
         messages.add_message(request, messages.SUCCESS, 'Votecount posted.')
 
     return HttpResponseRedirect(game.get_absolute_url())
