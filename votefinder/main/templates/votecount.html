@@ -1,15 +1,22 @@
-<div class="well" valign="top" id="votecount-well" style="word-wrap: break-word;">
-    <div class="row">
-        <div class="col-md-9">
-            <div style="float:right; margin: 0.5em;">
-                {% if post_vc_button %}
-                    <button class="button btn btn-default" id="post-vc-button">Post Votecount</button>
-                {% endif %}
-            </div>
-            <div id="votecount-results">{{ html_votecount|safe }}</div>
-    </div>
-    <div class="col-md-3">
-            <textarea id="bbcode" class="form-control">{{ bbcode_votecount }}</textarea>
-    </div>
-    </div>
-        </div>
+{% load pretty_votecount %}
+<b><u>Votecount for Day {{gameday}}</u></b>
+<br>
+<br>
+{% for x in votecounts_by_player %}
+{% if x.votes_received != 0 %}
+{% with last_vote=x.votes|last %}
+<div>{% pretty_votecount to_execute x.votes_received %} <b>{{x.player_name}} ({{x.votes_received}}): </b>{% for v in x.votes %}
+    {% if v.unvote == True %}<del>{{v.author}}</del>
+    {% elif v.enabled == True %}<a href="{{v.url}}">{{v.author}}</a>
+    {% else %}{{v.author}}
+    {% endif %}
+    {% if v != last_vote%}, {% else %}<br>{% endif %}
+{% endfor %}</div>
+{% endwith %}
+{% endif %}
+{% endfor %}
+<br>
+{% if not_voting|length != 0 %}
+<p><b>Not voting: </b>{{not_voting|join:", "}}</p><br>
+{% endif %}
+<p>With {{players}} alive, it's {{to_execute}} votes to execute.{% if deadline != '' %} The current deadline is {{deadline}} - that's in about <u>{{until_deadline}}</u>.{% endif %}</p>

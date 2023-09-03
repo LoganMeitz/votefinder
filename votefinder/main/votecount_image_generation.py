@@ -1,117 +1,177 @@
-import re
-
 from django.conf import settings
 
 from votefinder.main import VotecountFormatter
-from votefinder.main.models import Vote
 
-from PIL import ImageDraw, ImageFont
+from PIL import ImageDraw, ImageFont, Image
 
-def votecount_to_image(img, game, xpos=0, ypos=0, max_width=600):
-    draw = ImageDraw.Draw(img)
-    regular_font = ImageFont.truetype(settings.VF_REGULAR_FONT_PATH, 15)
-    bold_font = ImageFont.truetype(settings.VF_BOLD_FONT_PATH, 15)
+regular_font = ImageFont.truetype(settings.VF_REGULAR_FONT_PATH, 15)
+bold_font = ImageFont.truetype(settings.VF_BOLD_FONT_PATH, 15)
 
-    # Reset game template to None to force use of the system default votecount template instead of whatever the game is actually set to
-    game.template = None
+# dummy Image/ImageDraw objects to use so we can access
+# ImageDraw.multiline_textbbox before actually creating an image
+# there's gotta be a way to access that method otherwise but I can't seem to
+# find it
+dummy_img = Image.new('RGB', (0,0), (255, 255, 255))
+dummy_draw = ImageDraw.Draw(dummy_img)
 
+def votecount_to_image(game):
+
+    # get the gamestate object
     vc = VotecountFormatter.VotecountFormatter(game)
     vc.go(show_comment=False)
+    game_state = vc.game_state
 
-    split_vc = re.compile(r'\[.*?\]').sub('', vc.bbcode_votecount).split('\r\n')
-    header_text = split_vc[0]  # Explicitly take the first and last elements in case of multiline templates
-    footer_text = split_vc[-1]
-    (header_x_size, header_y_size) = draw_wordwrap_text(draw, header_text, 0, 0, max_width, bold_font)
-    draw.line([0, header_y_size - 2, header_x_size, header_y_size - 2], fill=(0, 0, 0, 255), width=2)
-    ypos = 2 * header_y_size
+    # we're going to compose the votecount image out of several smaller
+    # images - one for each player, plus one for the game title and one for
+    # the deadline/other information 
 
-    (vc_x_size, ypos) = draw_votecount_text(draw, vc, 0, ypos, max_width, regular_font, bold_font)
-    ypos += header_y_size
+    # keys are player names, values are a list - the first item in the
+    # list is the image of the player name/their votes received, and the
+    # second is an image of the received votes - these will be joined together
+    # into one image for composition later
+    # without knowing how tall the list of votes will be, it is hard to place
+    # them in one image to start
+    # I want to keep the player image/votes image together so they're easier to
+    # iterate over later
+    # note: python dictionaries are *generally* assumed to be in insertion order
+    # but this isn't guaranteed - there may be a better way to do this
+    votecounts = {}
 
-    (x_size, ypos) = draw_wordwrap_text(draw, footer_text, 0, ypos, max_width, regular_font)
+    # going over each of the players who have received votes to generate
+    # names/received votes - we need this to determine the maximum width
+    # available for the names that come afterwards
+    max_player_name_width = draw_votecount_names(game_state, votecounts)
 
-    votes = Vote.objects.select_related().filter(game=game, target=None, unvote=False, ignored=False, no_execute=False)
-    if votes:
-        ypos += header_y_size
-        if len(votes) == 1:
-            warning_text = 'Warning: There is currently 1 unresolved vote.  The votecount may be inaccurate.'
-        else:
-            warning_text = 'Warning: There are currently {} unresolved votes.  The votecount may be inaccurate.'.format(len(
-                votes))
+    # now we'll generate the actual list of voting players
+    draw_vote_list(game_state, votecounts, max_player_name_width)
 
-        (warning_x, ypos) = draw_wordwrap_text(draw, warning_text, 0, ypos, max_width, bold_font)
-        x_size = max(x_size, warning_x)
+    # split the votecounts dictionary into a list of tuples - index 0 of the
+    # tuple is the name of the voted player, index 1 is the list of votes
+    # total height is us keeping track of how tall the resuling image
+    # should be - we need this to create the blank image later
 
-    return (max(header_x_size, vc_x_size, x_size), ypos)
+    vote_images = []
+    total_height = 0
 
+    for v in votecounts.values():
+        vote_images.append((v[0], v[1]))
+        total_height += v[1].height
 
-def draw_votecount_text(draw, vc, xpos, ypos, max_width, font, bold_font):
-    votes_by_player = [voted_player for voted_player in vc.counted_votes if voted_player['count'] > 0]
-    longest_name = 0
-    divider_len_x, divider_len_y = draw.textsize(': ', font=font)
-    max_x = 0
-    if votes_by_player is None:  # No votes found
-        text = 'No votes found in vc.counted_votes~'
-        this_size_x, this_size_y = draw.textsize(text, font=bold_font)
-        return draw_wordwrap_text(draw, text, 0, ypos, max_width, bold_font)
-    for line in votes_by_player:
-        text = '{} ({})'.format(line['target'].name, line['count'])
-        this_size_x, this_size_y = draw.textsize(text, font=bold_font)
-        line['size'] = this_size_x
-        if this_size_x > longest_name:
-            longest_name = this_size_x
+    header_text = f"Votecount for Day {game_state['gameday']}"
 
-    for line_again in votes_by_player:  # noqa: WPS426
-        pct = float(line_again['count']) / vc.toexecute
-        box_width = min(pct * longest_name, longest_name)
-        draw.rectangle([longest_name - box_width, ypos, longest_name, this_size_y + ypos],
-                       fill=(int(155 + (pct * 100)), 100, 100, 0))
+    footer_text = f"With {game_state['players']} alive, it's {game_state['to_execute']} votes to execute."
+    if game_state['deadline'] != '':
+        footer_text += f"\nThe current deadline is {game_state['deadline']} - that's in about {game_state['until_deadline']}."
 
-        text = '{} ({})'.format(line_again['target'].name, line_again['count'])
-        (x_size1, y_bottom1) = draw_wordwrap_text(draw, text, longest_name - line_again['size'], ypos, max_width, bold_font)
+    # determining the height of the header and footer text
+    header_height = dummy_draw.multiline_textbbox(
+            (0,0),
+            header_text,
+            font=regular_font
+        )[3]
 
-        (x_size2, y_bottom2) = draw_wordwrap_text(draw, ': ', x_size1, ypos, max_width, font)
+    footer_height = dummy_draw.multiline_textbbox(
+            (0,0),
+            footer_text,
+            font=regular_font
+        )[3]
 
-        text = ', '.join(
-            [vote['author'].name for vote in filter(lambda vote: vote['unvote'] is False and vote['enabled'], line_again['votes'])])
-        (x_size3, y_bottom3) = draw_wordwrap_text(draw, text, x_size2 + divider_len_x, ypos, max_width, font)
+    # the 32 here gives 16 pixels of space above and below the votes - a margin
+    # for readability purposes
+    total_height = total_height + header_height + footer_height + 32
 
-        max_x = max(max_x, x_size3)
-        ypos = max(y_bottom1, y_bottom2, y_bottom3)
+    # Actual image creation follows
+    # the +16s are to create a margin around the image, so the text doesn't
+    # butt right up to the edge
+    img = Image.new('RGB', (816, total_height + 16), (255, 255, 255))
+    draw = ImageDraw.Draw(img)
 
-    return (max_x, ypos)
+    # cursor values to keep track of where we should be drawing on our image
+    # cursor_x doesn't actually change at any point, but the purpose of
+    # the code is clearer with it
+    cursor_x = 8
+    cursor_y = 8
 
+    draw.text((cursor_x, cursor_y), header_text, fill=(0,0,0), font=bold_font)
+    cursor_y += header_height + 16
 
-def draw_wordwrap_text(draw, text, xpos, ypos, max_width, font):
-    fill = (0, 0, 0, 0)
-    used_width = 0
-    max_width -= xpos
-    space_width, space_height = draw.textsize(' ', font=font)
+    for name, votes in vote_images:
+        name_offset = max_player_name_width - name.width
+        img.paste(name, (cursor_x + name_offset, cursor_y))
+        img.paste(votes, (cursor_x + max_player_name_width, cursor_y))
+        cursor_y += votes.height
 
-    text_size_x, text_size_y = draw.textsize(text, font=font)
-    remaining = max_width
-    output_text = []
+    cursor_y += 16
+    draw.text((cursor_x, cursor_y), footer_text, fill=(0,0,0), font=bold_font)
 
-    for word in text.split(None):
-        word_width, word_height = draw.textsize(word, font=font)
-        if word_width + space_width > remaining:
-            output_text.append(word)
-            remaining = max_width - word_width
-        elif output_text:
-            output = output_text.pop()
-            output = '{} {}'.format(output, word)
-            output_text.append(output)
-            remaining = remaining - (word_width + space_width)
-        else:
-            output_text.append(word)
-            remaining = remaining - (word_width + space_width)
+    return img
 
-    for text_element in output_text:
-        cur_width, cur_height = draw.textsize(text_element, font=font)
-        if (cur_width > used_width):
-            used_width = cur_width
+# generates images of the player name plus their received votes, plus
+# returns widest player name, for generation of the vote list image
+def draw_votecount_names(game_state, votecounts):
+    
+    # going to store the widest player name plus votes received so far so we
+    # can use it later when building other elements
+    max_player_name_width = 0
 
-        draw.text((xpos, ypos), text_element, font=font, fill=fill)
-        ypos += text_size_y
+    for votecount in [x for x in game_state['votecounts_by_player'] if x['votes_received'] != 0]:
 
-    return used_width + xpos, ypos
+        # figure maximum width of generated text and create image for it
+        text = f'{votecount["player_name"]} ({votecount["votes_received"]}): '
+        _, _, right, bottom = dummy_draw.textbbox((0,0), text=text, font=bold_font)
+        img = Image.new('RGB', (right, bottom), (255, 255, 255))
+        draw = ImageDraw.Draw(img)
+        draw.text((0,0), text=text, font=regular_font, fill=(0,0,0))
+
+        votecounts[votecount['player_name']] = [img, None]        
+
+        max_player_name_width = max(max_player_name_width, right)
+
+    return max_player_name_width
+
+def draw_vote_list(game_state, votecounts, max_player_name_width):
+    max_width = 800 - max_player_name_width
+
+    for votecount in [x for x in game_state['votecounts_by_player'] if x['votes_received'] != 0]:
+
+        player_names = [
+            n['author'] for n in votecount['votes'] if
+            n['enabled'] == True and n['unvote'] == False
+        ]
+
+        player_names_text = player_names[0]
+
+        _, _, _, text_height = dummy_draw.multiline_textbbox(
+                (0,0),
+                player_names[0],
+                font=regular_font
+            )
+
+        # we start iteration at 1 because we've already figured the bounding
+        # box with the first player name present
+        for p in player_names[1:len(player_names)]:
+            _, _, right, bottom = dummy_draw.multiline_textbbox(
+                (0,0),
+                player_names_text + f', {p}',
+                font=regular_font
+            )
+            if right > max_width:
+                text_height += bottom
+                player_names_text += f',\n{p}'
+            else:
+                player_names_text += f', {p}'
+            
+            
+
+        # the + 4 to text height is to insure things like the tails of 
+        # characters like 'g' don't accidentally get cropped
+        votes_image = Image.new('RGB', (max_width, text_height + 4), (255, 255, 255))
+        votes_draw = ImageDraw.Draw(votes_image)
+        votes_draw.multiline_text(
+                (0,0),
+                player_names_text,
+                fill=(0, 0, 0),
+                font=regular_font
+            )
+
+        votecounts[votecount['player_name']][1] = votes_image

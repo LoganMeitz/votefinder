@@ -18,7 +18,6 @@ from django.http import (HttpResponse, HttpResponseForbidden,
                          HttpResponseNotFound, HttpResponseRedirect)
 from django.shortcuts import get_list_or_404, get_object_or_404, render, redirect
 from django.template.context_processors import csrf
-
 from PIL import Image
 from votefinder.main.models import (AddCommentForm, AddFactionForm, AddPlayerForm,  # noqa: WPS235
                                     Alias, BlogPost, Comment, Game, GameDay,
@@ -160,15 +159,11 @@ def game(request, slug):
         player_state = False
 
     post_vc_button = bool(check_mod(request, game) and (game.last_vc_post is None or datetime.now() - game.last_vc_post >= timedelta(minutes=60) or (game.deadline and game.deadline - datetime.now() <= timedelta(minutes=60))))
-
-    vc_formatter = VotecountFormatter.VotecountFormatter(game)
-    vc_formatter.go()
-
     context = {'game': game, 'players': players, 'moderator': check_mod(request, game), 'form': form,
                'comment_form': comment_form, 'gameday': gameday, 'post_vc_button': post_vc_button,
                'nextDay': gameday.day_number + 1, 'deadline': deadline, 'templates': templates,
                'manual_votes': manual_votes, 'timezone': tzone, 'common_timezones': common_timezones,
-               'updates': updates, 'playerstate': player_state, 'faction_form': faction_form, 'broken': False, 'vc': vc_formatter, 'bbcode_votecount': vc_formatter.get_bbcode()}
+               'updates': updates, 'playerstate': player_state, 'faction_form': faction_form, 'broken': False}
     return render(request, 'game.html', context)
 
 
@@ -413,27 +408,26 @@ def delete_spectators(request, gameid):
     return HttpResponseRedirect(game.get_absolute_url())
 
 
-# def votecount(request, gameid):
-#     game = get_object_or_404(Game, id=gameid)
-#     try:
-#         votes = Vote.objects.select_related().filter(game=game, target=None, unvote=False, ignored=False, no_execute=False)
-#         if votes:
-#             players = sorted(game.all_players(), key=lambda player: player.player.name.lower())
-#             return render(request, 'unresolved.html',
-#                           {'game': game, 'votes': votes, 'players': players})
-#     except Vote.DoesNotExist:
-#         pass  # noqa: WPS420
+def votecount(request, gameid):
+    game = get_object_or_404(Game, id=gameid)
+    try:
+        votes = Vote.objects.select_related().filter(game=game, target=None, unvote=False, ignored=False, no_execute=False)
+        if votes:
+            players = sorted(game.all_players(), key=lambda player: player.player.name.lower())
+            return render(request, 'unresolved.html',
+                          {'game': game, 'votes': votes, 'players': players})
+    except Vote.DoesNotExist:
+        pass  # noqa: WPS420
 
-#     vc_formatter = VotecountFormatter.VotecountFormatter(game)
-#     vc_formatter.go()
+    vc_formatter = VotecountFormatter.VotecountFormatter(game)
+    vc_formatter.go()
 
-#     post_vc_button = bool(check_mod(request, game) and (game.last_vc_post is None or datetime.now() - game.last_vc_post >= timedelta(
-#         minutes=60) or (game.deadline and game.deadline - datetime.now() <= timedelta(minutes=60))))
-
-#     context = {'post_vc_button': post_vc_button,
-#                'html_votecount': vc_formatter.get_html(),
-#                'bbcode_votecount': vc_formatter.get_bbcode()}
-#     return render(request, 'votecount.html', context)
+    post_vc_button = bool(check_mod(request, game) and (game.last_vc_post is None or datetime.now() - game.last_vc_post >= timedelta(
+        minutes=60) or (game.deadline and game.deadline - datetime.now() <= timedelta(minutes=60))))
+    context = {'post_vc_button': post_vc_button,
+               'html_votecount': vc_formatter.html_votecount,
+               'bbcode_votecount': vc_formatter.bbcode_votecount}
+    return render(request, 'votecount.html', context)
 
 
 def resolve(request, voteid, resolution):
@@ -893,29 +887,21 @@ def check_update_game(game):
 def votecount_image(request, slug):
     game = get_object_or_404(Game, slug=slug)
 
-    if settings.DEBUG == True:
-        print("Debug - testing image generation")
-        # skip all the caching and just generate a fresh image for testing
+    key = f'{slug}-vc-image'
+    img_dict = cache.get(key)
+
+    if img_dict is None:
         game = check_update_game(game)
-        img = votecount_to_image(game)
-        response = HttpResponse(content_type='image/png')
-        img.save(response, 'PNG')  # transparency=(255, 255, 255))
-        return response
-
+        img = Image.new('RGB', (800, 1024), (255, 255, 255))
+        (width, height) = votecount_to_image(img, game, 800)
+        img = img.crop((0, 0, width, height))
+        cache.set(key, {'size': img.size, 'data': img.tobytes()}, 120)
     else:
-        key = f'{slug}-vc-image'
-        img_dict = cache.get(key)
+        img = Image.frombytes('RGB', img_dict['size'], img_dict['data'])
 
-        if img_dict is None:
-            game = check_update_game(game)
-            img = votecount_to_image(game)
-            cache.set(key, {'size': img.size, 'data': img.tobytes()}, 120)
-        else:
-            img = Image.frombytes('RGB', img_dict['size'], img_dict['data'])
-
-        response = HttpResponse(content_type='image/png')
-        img.save(response, 'PNG')  # transparency=(255, 255, 255))
-        return response
+    response = HttpResponse(content_type='image/png')
+    img.save(response, 'PNG')  # transparency=(255, 255, 255))
+    return response
 
 
 def autoupdate(request):
@@ -1048,7 +1034,7 @@ def post_vc(request, gameid):
             dl = SAForumPageDownloader.SAForumPageDownloader()
         elif game.home_forum == 'bnr':
             dl = BNRApi.BNRApi()
-        dl.reply_to_thread(game.thread_id, vc_formatter.get_bbcode())
+        dl.reply_to_thread(game.thread_id, vc_formatter.bbcode_votecount)
         messages.add_message(request, messages.SUCCESS, 'Votecount posted.')
 
     return HttpResponseRedirect(game.get_absolute_url())
