@@ -3,6 +3,8 @@ import math
 import random
 import requests
 import urllib
+import re
+
 from datetime import datetime, timedelta
 from math import ceil
 
@@ -69,41 +71,55 @@ def add(request):
 def add_game(request):
     return_status = {'success': True, 'message': 'Success!', 'url': ''}
     if request.method == 'POST':
-        threadid = request.POST.get('threadid')
-        state = request.POST.get('addState')
-        home_forum = request.POST.get('home_forum')
-        if state in {'started', 'pregame'}:
-            try:
-                game = Game.objects.get(thread_id=threadid, home_forum=home_forum)
-                return_status['url'] = game.get_absolute_url()
-            except Game.DoesNotExist:
-                if home_forum == 'bnr':
-                    page_parser = BNRPageParser.BNRPageParser()
-                elif home_forum == 'sa':
-                    page_parser = SAPageParser.SAPageParser()
-                else:
-                    return_status['success'] = False
-                    return_status['message'] = "Couldn't determine the parent forum or unsupported parent forum. Sorry!"
-                    return HttpResponse(simplejson.dumps(return_status), content_type='application/json')
-                page_parser.user = request.user
-                game = page_parser.add_game(threadid, state)
-                if game:
-                    return_status['url'] = game.get_absolute_url()
-                    game.status_update(f'A new game was created by {game.moderator.name}!')
+        # request contains two keys: textURL, and isAlreadyStarted
+        # technically also contains the CSRF token but, not pertinent here
+        print(request.POST)
+        if 'breadnroses.net' in request.POST['textURL']:
+            home_forum = 'bnr'
+            id_regex = re.compile(r'threads\/.*\.(\d*)\/')
+            thread_id = re.search(id_regex, request.POST['textURL']).group(1)
+        elif 'forums.somethingawful.com' in request.POST['textURL']:
+            home_forum = 'sa'
+            id_regex = re.compile(r'threadid=(\d*)')
+            thread_id = re.search(id_regex, request.POST['textURL']).group(1)
 
-                    if game.home_forum == 'sa':
-                        message_data = {'content': f'{game.moderator.name} has opened {game.name}. Thread link: https://forums.somethingawful.com/showthread.php?threadid={game.thread_id}', 'username': 'Votefinder Game Announcement'}
-                        session = requests.Session()
-                        session.post(f'https://discordapp.com/api/webhooks/{settings.VF_SA_DISCORD_CHANNEL}/{settings.VF_SA_DISCORD_WEBHOOK}', data=message_data)  # TODO issue 198
-                else:
-                    return_status['success'] = False
-                    return_status['message'] = "Couldn't download or parse the forum thread.  Sorry!"
+        state = request.POST['isAlreadyStarted']
+
+
+        try:
+            game = Game.objects.get(thread_id=thread_id, home_forum=home_forum)
+            return_status['url'] = game.get_absolute_url()
+        except Game.DoesNotExist:
+            if home_forum == 'bnr':
+                page_parser = BNRPageParser.BNRPageParser()
+            elif home_forum == 'sa':
+                page_parser = SAPageParser.SAPageParser()
+            else:
+                return_status['success'] = False
+                return_status['message'] = "Couldn't determine the parent forum or unsupported parent forum. Sorry!"
+                return HttpResponse(simplejson.dumps(return_status), content_type='application/json')
+            page_parser.user = request.user
+            game = page_parser.add_game(thread_id, state)
+            if game:
+                return_status['url'] = game.get_absolute_url()
+                game.status_update(f'A new game was created by {game.moderator.name}!')
+
+                if game.home_forum == 'sa':
+                    message_data = {'content': f'{game.moderator.name} has opened {game.name}. Thread link: https://forums.somethingawful.com/showthread.php?threadid={game.thread_id}', 'username': 'Votefinder Game Announcement'}
+                    session = requests.Session()
+                    session.post(f'https://discordapp.com/api/webhooks/{settings.VF_SA_DISCORD_CHANNEL}/{settings.VF_SA_DISCORD_WEBHOOK}', data=message_data)  # TODO issue 198
+            else:
+                return_status['success'] = False
+                return_status['message'] = "Couldn't download or parse the forum thread.  Sorry!"
+
         else:
             return_status['success'] = False
-            return_status['message'] = "Couldn\'t validate the starting game state. Please contact support."
+            return_status['message'] = "Couldn't validate the starting game state. Please contact support."
+
     else:
         return_status['success'] = False
         return_status['message'] = 'Form was submitted incorrectly. Please use the add game page.'
+        
     return HttpResponse(simplejson.dumps(return_status), content_type='application/json')
 
 

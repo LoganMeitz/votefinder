@@ -104,6 +104,7 @@ class Game(models.Model):
     current_page = models.IntegerField()
     slug = models.SlugField()
     locked_at = models.DateTimeField(null=True, blank=True)
+    # state is 'closed', 'pregame' or 'started'
     state = models.CharField(max_length=32)
     deadline = models.DateTimeField(null=True, blank=True)
     template = models.ForeignKey(VotecountTemplate, null=True, blank=True, on_delete=models.SET_DEFAULT, default=2)
