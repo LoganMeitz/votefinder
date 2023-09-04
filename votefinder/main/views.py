@@ -89,7 +89,7 @@ def add_game(request):
         try:
             game = Game.objects.get(thread_id=thread_id, home_forum=home_forum)
             return redirect(game.get_absolute_url())
-            
+
         except Game.DoesNotExist:
             if home_forum == 'bnr':
                 page_parser = BNRPageParser.BNRPageParser()
@@ -109,13 +109,11 @@ def add_game(request):
                     message_data = {'content': f'{game.moderator.name} has opened {game.name}. Thread link: https://forums.somethingawful.com/showthread.php?threadid={game.thread_id}', 'username': 'Votefinder Game Announcement'}
                     session = requests.Session()
                     session.post(f'https://discordapp.com/api/webhooks/{settings.VF_SA_DISCORD_CHANNEL}/{settings.VF_SA_DISCORD_WEBHOOK}', data=message_data)  # TODO issue 198
+
+                return redirect(game.get_absolute_url())
             else:
                 return_status['success'] = False
                 return_status['message'] = "Couldn't download or parse the forum thread.  Sorry!"
-
-        else:
-            return_status['success'] = False
-            return_status['message'] = "Couldn't validate the starting game state. Please contact support."
 
     else:
         return_status['success'] = False

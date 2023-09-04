@@ -211,6 +211,7 @@ INSTALLED_APPS = (
     'django.contrib.staticfiles',
     'votefinder.main',
     'votefinder.vfauth',
+    'debug_app'
 )
 
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'

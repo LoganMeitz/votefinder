@@ -67,14 +67,17 @@ class BNRPageParser:
             day_number = 1
             self.state = 'started'
 
-        game, game_created = Game.objects.get_or_create(thread_id=threadid,
-                                                        defaults={'moderator': mod, 'name': self.gameName,
-                                                                  'current_page': 1, 'max_pages': 1, 'state': self.state,
-                                                                  'added_by': self.user, 'current_day': day_number, 'home_forum': 'bnr'})
+        try:
+            game = Game.objects.get(thread_id=threadid)
+            game_created = False
+        except:
+            game = Game.objects.create(thread_id=threadid,
+                moderator=mod, name=self.gameName, current_page=1, max_pages=1, state=self.state, added_by=self.user, current_day=day_number, home_forum='bnr')
+            game_created = True
 
         if game_created:
-            player_state, created = PlayerState.objects.get_or_create(game=game, player=mod,
-                                                                      defaults={'moderator': True})
+            player_state = PlayerState.objects.create(game=game, player=mod, moderator=True)
+            
         else:
             self.gamePlayers = [player.player for player in game.all_players()]
 

@@ -159,7 +159,10 @@ class Game(models.Model):
             else:
                 self.slug = slugify_uniquely(filtered_name.strip(), self.__class__)
         self.locked_at = None
-        self.update_counts()
+        try:
+            self.update_counts()
+        except:
+            pass
         super().save(*args, **kwargs)
 
     def get_absolute_url(self):
