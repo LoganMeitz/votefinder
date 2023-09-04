@@ -88,7 +88,8 @@ def add_game(request):
 
         try:
             game = Game.objects.get(thread_id=thread_id, home_forum=home_forum)
-            return_status['url'] = game.get_absolute_url()
+            return redirect(game.get_absolute_url())
+            
         except Game.DoesNotExist:
             if home_forum == 'bnr':
                 page_parser = BNRPageParser.BNRPageParser()
@@ -119,7 +120,7 @@ def add_game(request):
     else:
         return_status['success'] = False
         return_status['message'] = 'Form was submitted incorrectly. Please use the add game page.'
-        
+
     return HttpResponse(simplejson.dumps(return_status), content_type='application/json')
 
 
