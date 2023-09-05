@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load access_settings %}
 {% block title %}{{ game.name|safe }}{% endblock %}
 
 
@@ -7,6 +8,12 @@
     <div class="btn-group">
         <a class="btn btn-sm btn-default" title="Open Thread" target="_blank"
            href="{% if game.home_forum == 'sa' %}https://forums.somethingawful.com/showthread.php?threadid={{ game.thread_id }}{% elif game.home_forum == 'bnr' %}https://breadnroses.net/threads/{{ game.thread_id }}{% endif %}" id="liveThread"><i class="fa fa-link"></i></a>
+           {% access_settings "VF_DEBUG" as debug %}
+           {% if user.is_superuser and debug %}
+           <br>
+           <p>Debug is {{ debug }} -  be careful!</p>
+           <a href="/debug/delete/{{game.id}}">Delete this game!</a>
+           {% endif %}
     </div>
     <hr>
 

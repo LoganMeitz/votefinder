@@ -104,6 +104,7 @@ class Game(models.Model):
     current_page = models.IntegerField()
     slug = models.SlugField()
     locked_at = models.DateTimeField(null=True, blank=True)
+    # state is 'closed', 'pregame' or 'started'
     state = models.CharField(max_length=32)
     deadline = models.DateTimeField(null=True, blank=True)
     template = models.ForeignKey(VotecountTemplate, null=True, blank=True, on_delete=models.SET_DEFAULT, default=2)
@@ -158,7 +159,10 @@ class Game(models.Model):
             else:
                 self.slug = slugify_uniquely(filtered_name.strip(), self.__class__)
         self.locked_at = None
-        self.update_counts()
+        try:
+            self.update_counts()
+        except:
+            pass
         super().save(*args, **kwargs)
 
     def get_absolute_url(self):

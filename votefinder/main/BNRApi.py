@@ -6,6 +6,8 @@ from django.conf import settings
 
 class BNRApi():
     def __init__(self):
+        if not settings.VF_BNR_API_KEY:
+            raise BNRApiKeyError
         self.session = requests.Session()
         self.api_key = settings.VF_BNR_API_KEY
         self.session.headers.update({'XF-API-Key': self.api_key})
@@ -13,7 +15,6 @@ class BNRApi():
 
     def download(self, page):
         page_data = self.perform_download(page)
-
         if page_data is None:
             return None
         return page_data
@@ -50,6 +51,12 @@ class BNRApi():
         user_json = json.loads(user.text)
         return user_json['user']
 
+class BNRApiKeyError(Exception):
+    def __init__(self):
+        self.message = "You're missing the BNR API key in your .env file."
+    
+    def __str__(self):
+        return self.message
 
 if __name__ == '__main__':
     dl = BNRApi()

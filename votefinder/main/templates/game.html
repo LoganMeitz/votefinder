@@ -189,6 +189,12 @@ $(document).ready(function () {
             <a title="Update" href="#" id="updateButton" class="btn btn-sm btn-default"><i class="fa fa-refresh"></i></a>
             <a title="Vote Chart" class="button btn btn-sm btn-default" href="/votechart/{{ game.slug }}"><i class="fa fa-bar-chart"></i></a>
         {% endif %}
+        {% access_settings "VF_DEBUG" as debug %}
+        {% if user.is_superuser and debug %}
+            <br>
+            <p>Debug is {{ debug }} -  be careful!</p>
+            <a href="/debug/delete/{{game.id}}">Delete this game!</a>
+        {% endif %}
     </div>
     <hr>
 
