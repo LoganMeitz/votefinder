@@ -18,6 +18,8 @@ source /var/venvs/venv/bin/activate
 
 The virtual environment can be installed wherever you'd like; just make sure you know where it is.
 
+If you'd like to keep your Votefinder venv alongside the Votefinder code, the `.gitignore` for this repo already has an entry for `/vfvenv`.
+
 Install the requirements from `requirements.txt` into the virtual environment.
 
 ```bash

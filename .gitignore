@@ -5,3 +5,4 @@
 .vscode/
 guni.log
 Pipfile
+/vfvenv
