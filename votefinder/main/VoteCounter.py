@@ -70,17 +70,17 @@ class VoteCounter:
             gameday.notified = True
             gameday.save()
             if game.post_executions:
-                game.status_update('{} was executed on day {}!'.format(executee.name, gameday.day_number))
+                game.status_update(f'{executee.name} was executed on day {gameday.day_number}!')
                 self.post_execute_message(game, executee.name)
 
     def post_execute_message(self, game, name):
         message = random.choice(ExecutionMessage.objects.all()).text  # noqa: S311
         vc_formatter = VotecountFormatter.VotecountFormatter(game)
         vc_formatter.go()
-        message = '{}\n\n'.format(message)
-        message += vc_formatter.bbcode_votecount
+        message = f'{message}\n\n'
+        message += vc_formatter.get_bbcode()
         if game.home_forum == 'sa':
-            message = ':redhammer: {}'.format(message)
+            message = f':redhammer: {message}'
             dl = SAForumPageDownloader.SAForumPageDownloader()
         elif game.home_forum == 'bnr':
             dl = BNRApi.BNRApi()
@@ -117,20 +117,18 @@ class VoteCounter:
         result_item = self.results[target]
         if unvote:
             result_item['count'] -= 1
-            text = '{} unvotes'.format(author)
+            text = f'{author} unvotes'
         else:
             result_item['count'] += 1
-            text = '{} votes {}'.format(author, target)
+            text = f'{author} votes {target}'
 
         self.voteLog.append({'timestamp': timestamp, 'player': target.name, 'count': result_item['count'], 'text': text})
         if self.game.home_forum == 'sa':
             result_item['votes'].append({'unvote': unvote, 'enabled': True, 'author': author,
-                                        'url': 'https://forums.somethingawful.com/showthread.php?threadid={}&pagenumber={}#post{}'.format(
-                                         self.game.thread_id, page, postid)})
+                                        'url': f'https://forums.somethingawful.com/showthread.php?threadid={self.game.thread_id}&pagenumber={page}#post{postid}'})
         elif self.game.home_forum == 'bnr':
             result_item['votes'].append({'unvote': unvote, 'enabled': True, 'author': author,
-                                        'url': 'https://breadnroses.net/threads/{}/post-{}'.format(
-                                         self.game.thread_id, postid)})
+                                        'url': f'https://breadnroses.net/threads/{self.game.thread_id}/post-{postid}'})
 
     def handle_unvote(self, vote):
         current_vote = self.player_is_voting(vote.author)

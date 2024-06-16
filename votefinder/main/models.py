@@ -49,7 +49,7 @@ class Player(models.Model):
         return self.name
 
     def get_absolute_url(self):
-        return '/player/{}'.format(self.slug)
+        return f'/player/{self.slug}'
 
     def save(self, *args, **kwargs):
         if not self.id:
@@ -84,15 +84,15 @@ class VotecountTemplate(models.Model):
     after_unvoted_vote = models.CharField(max_length=256, blank=True)
     detail_level = models.IntegerField(choices=DETAIL_LEVEL_CHOICES, default=3)
     hide_zero_votes = models.BooleanField(default=False)
-    full_tick = models.CharField(max_length=256, default='https://{}/t.png'.format(settings.VF_PRIMARY_DOMAIN))
-    empty_tick = models.CharField(max_length=256, default='https://{}/te.png'.format(settings.VF_PRIMARY_DOMAIN))
+    full_tick = models.CharField(max_length=256, default=f'https://{settings.VF_PRIMARY_DOMAIN}/t.png')
+    empty_tick = models.CharField(max_length=256, default=f'https://{settings.VF_PRIMARY_DOMAIN}/te.png')
 
     def __str__(self):
         if self.system_default:
-            return 'DEFAULT: {} [by {}]'.format(self.name, self.creator)
+            return f'DEFAULT: {self.name} [by {self.creator}]'
         elif self.shared:
-            return 'SHARED: {} [by {}]'.format(self.name, self.creator)
-        return '{} [by {}]'.format(self.name, self.creator)
+            return f'SHARED: {self.name} [by {self.creator}]'
+        return f'{self.name} [by {self.creator}]'
 
 
 class Game(models.Model):
@@ -104,6 +104,7 @@ class Game(models.Model):
     current_page = models.IntegerField()
     slug = models.SlugField()
     locked_at = models.DateTimeField(null=True, blank=True)
+    # state is 'closed', 'pregame' or 'started'
     state = models.CharField(max_length=32)
     deadline = models.DateTimeField(null=True, blank=True)
     template = models.ForeignKey(VotecountTemplate, null=True, blank=True, on_delete=models.SET_DEFAULT, default=2)
@@ -158,11 +159,14 @@ class Game(models.Model):
             else:
                 self.slug = slugify_uniquely(filtered_name.strip(), self.__class__)
         self.locked_at = None
-        self.update_counts()
+        try:
+            self.update_counts()
+        except:
+            pass
         super().save(*args, **kwargs)
 
     def get_absolute_url(self):
-        return '/game/{}'.format(self.slug)
+        return f'/game/{self.slug}'
 
     def count_players(self):
         return self.players.filter(spectator=False, moderator=False).count()
@@ -228,7 +232,7 @@ class Comment(models.Model):
     comment = models.CharField(max_length=4096, blank=True, null=True)
 
     def __str__(self):
-        return '{}: {}'.format(self.player, self.comment[:100])
+        return f'{self.player}: {self.comment[:100]}'
 
 
 class PlayerState(models.Model):
@@ -269,7 +273,7 @@ class PlayerState(models.Model):
         return 'Dead'
 
     def __str__(self):
-        return '{} [{}]'.format(self.player, self.state())
+        return f'{self.player} [{self.state()}]'
 
     class Meta:
         unique_together = ('game', 'player')
@@ -302,7 +306,7 @@ class Post(models.Model):
         ]
 
     def __str__(self):
-        return '{} at {}'.format(self.author.name, self.timestamp)
+        return f'{self.author.name} at {self.timestamp}'
 
 
 class Vote(models.Model):
@@ -318,8 +322,8 @@ class Vote(models.Model):
 
     def __str__(self):
         if self.unvote:
-            return '{} unvotes'.format(self.author)
-        return '{} votes {}'.format(self.author, self.target_string)
+            return f'{self.author} unvotes'
+        return f'{self.author} votes {self.target_string}'
 
 
 class GameStatusUpdate(models.Model):
@@ -331,9 +335,9 @@ class GameStatusUpdate(models.Model):
     def save(self, *args, **kwargs):
         if not self.id:
             if self.game.home_forum == 'sa':
-                post_url = 'https://forums.somethingawful.com/showthread.php?goto=post&postid={}'.format(self.game.posts.all().order_by('-id')[0].post_id)
+                post_url = f'https://forums.somethingawful.com/showthread.php?goto=post&postid={self.game.posts.all().order_by("-id")[0].post_id}'
             elif self.game.home_forum == 'bnr':
-                post_url = 'https://breadnroses.net/threads/{}/post-{}'.format(self.game.thread_id, self.game.posts.all().order_by('-id')[0].post_id)
+                post_url = f'https://breadnroses.net/threads/{self.game.thread_id}/post-{self.game.posts.all().order_by("-id")[0].post_id}'
             try:
                 if url is None:
                     self.url = post_url
@@ -384,7 +388,7 @@ class GameDay(models.Model):
     notified = models.BooleanField(default=False)
 
     def __str__(self):
-        return 'Day {} of {}'.format(self.day_number, self.game)
+        return f'Day {self.day_number} of {self.game}'
 
 
 class CookieStore(models.Model):

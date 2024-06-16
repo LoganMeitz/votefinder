@@ -18,7 +18,6 @@ urlpatterns = [
     path('player_list/', views.player_list),
     re_path(r'^add_player/(?P<gameid>\d+)/*$', views.add_player),
     re_path(r'^delete_spectators/(?P<gameid>\d+)/*$', views.delete_spectators),
-    path('votecount/<int:gameid>/', views.votecount),
     re_path(r'^resolve/(?P<voteid>\d+)/(?P<resolution>-{0,1}\d+)/*$', views.resolve),
     re_path(r'^posts/(?P<gameid>\d+)/(?P<page>\d+)/*$', views.posts),
     re_path(r'^add_comment/(?P<gameid>\d+)/*$', views.add_comment),

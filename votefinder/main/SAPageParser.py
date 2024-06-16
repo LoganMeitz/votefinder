@@ -24,8 +24,7 @@ class SAPageParser:
     def add_game(self, threadid, state):
         self.new_game = True
         self.state = state
-        return self.download_and_update('https://forums.somethingawful.com/showthread.php?threadid={}'.format(threadid),
-                                        threadid)
+        return self.download_and_update(f'https://forums.somethingawful.com/showthread.php?threadid={threadid}', threadid)
 
     def download_and_update(self, url, threadid):
         page_html = self.download_forum_page(url)
@@ -45,8 +44,7 @@ class SAPageParser:
             page = game.current_page + 1
 
         return self.download_and_update(
-            'https://forums.somethingawful.com/showthread.php?threadid={}&pagenumber={}'.format(game.thread_id, page),
-            game.thread_id)
+            f'https://forums.somethingawful.com/showthread.php?threadid={game.thread_id}&pagenumber={page}', game.thread_id)
 
     def download_forum_page(self, url):
         return self.downloader.download(url)
@@ -77,13 +75,13 @@ class SAPageParser:
             self.state = 'started'
 
         game, game_created = Game.objects.get_or_create(thread_id=threadid,
-                                                        defaults={'moderator': mod, 'name': self.gameName,
-                                                                  'current_page': 1, 'max_pages': 1, 'state': self.state,
-                                                                  'added_by': self.user, 'current_day': day_number, 'home_forum': 'sa'})
+            defaults={'moderator': mod, 'name': self.gameName,
+                    'current_page': 1, 'max_pages': 1, 'state': self.state,
+                    'added_by': self.user, 'current_day': day_number, 'home_forum': 'sa'})
 
         if game_created:
-            player_state, created = PlayerState.objects.get_or_create(game=game, player=mod,
-                                                                      defaults={'moderator': True})
+            player_state, created = PlayerState.objects.get_or_create(game=game, player=mod, defaults={'moderator': True})
+            
         else:
             self.gamePlayers = [player.player for player in game.all_players()]
 
@@ -172,7 +170,7 @@ class SAPageParser:
         post.bodySoup = node.find('td', 'postbody')
         for quote in post.bodySoup.findAll('div', 'bbc-block'):
             quote['class'] = 'quote well'
-        [img.replaceWith('<div class="embedded-image not-loaded" data-image="{}">Click to load image...</div>'.format(img['src'])) for img in post.bodySoup.find_all('img')]  # noqa: WPS428 false positive
+        [img.replaceWith(f'<div class="embedded-image not-loaded" data-image="{img["src"]}">Click to load image...</div>') for img in post.bodySoup.find_all('img')]  # noqa: WPS428 false positive
         post.body = post.bodySoup.prettify(formatter=None)
         post.body = re.sub(r'google_ad_section_(start|end)', '', post.body)
         post_date_node = node.find('td', 'postdate')

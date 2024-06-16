@@ -1,121 +1,20 @@
 {% extends "base.html" %}
 {% block title %}Votefinder: Add Game{% endblock %}
 
-{% block onready %}
-
-    function dataReceived(data) {
-        $('#loading').hide();
-        var str = "";
-        $.each(data, function(i, game) {
-            if (game.tracked == true) {
-                str = '<span class="grayed">' + game.name + '</span>';
-            } else {
-                str = '<a href="' + game.url + '" data-threadid="' + game.threadid + '" data-homeforum="' + game.home_forum + '">' + game.name + '</a>';
-            }
-            $('#gameList ul').append('<li>' + str + '</li>');
-        });
-        $('#gameListContainer').show('slow');
-    }
-
-    $('#addButton').button();
-    $('#gameListContainer').hide();
-    $('#dialog').modal('hide');
-    $.getJSON('/game_list/1', dataReceived);
-    $.getJSON('/game_list/2', dataReceived);
-    $('#addButton').click(function() { doAddGame($('#textUrl').val()); });
-    $('#gameList').on('click', 'a', function (event) {
-        doAddGame(event.target.getAttribute('data-threadid'), event.target.getAttribute('data-homeforum'));
-        event.preventDefault();
-    });
-    /* CSRF setup for Django */
-    var csrftoken = $("[name=csrfmiddlewaretoken]").val();
-    
-    function csrfSafeMethod(method) {
-        // these HTTP methods do not require CSRF protection
-        return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
-    }
-    
-    $.ajaxSetup({
-        beforeSend: function(xhr, settings) {
-            if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
-                xhr.setRequestHeader("X-CSRFToken", csrftoken);
-            }
-        }
-    });
-    
-    function doAddGame(threadid, home_forum = null) {
-        if (!isNaN(threadid)) {
-            $("#dialog-content").html('<img src="/static/loading.gif" class="loadingImg">Downloading thread...');
-            if(!$('#dialog').hasClass('in')) {
-                $('#dialog').modal('show');
-            }
-            $.post('/add_game', {threadid: threadid, home_forum: home_forum, addState: ($('#isAlreadyStarted').is(':checked') ? 'started' : 'pregame')}, function(data) {
-                if (data.success == true) {
-                    location.href = data.url;
-                } else {
-                    $("#dialog-content").html(data.message);
-                }
-            }, 'json');
-        } else {
-            if (threadid.includes('somethingawful')) {
-                var thread = threadid.replace(/threadid=(\d+)/);
-                var result = RegExp.$1;
-                home_forum = 'sa';
-            } else if (threadid.includes('breadnroses.net')) {
-                var thread = threadid.replace(/threads\/.*\.(\d+)\/?$/);
-                var result = RegExp.$1;
-                home_forum = 'bnr';
-            }
-            if (result) {
-                $.post('/add_game', {threadid: result, home_forum: home_forum, addState: ($('#isAlreadyStarted').is(':checked') ? 'started' : 'pregame')}, function(data) {
-                    if (data.success == true) {
-                        location.href = data.url;
-                    } else {
-                        $("#dialog-content").html(data.message);
-                    }
-                }, 'json');
-            } else {
-                alert("That doesn't look like a good thread URL.");
-            }
-        }
-    }
-    
-{% endblock %}
-
 {% block content %}
     <h1><a href="/">Votefinder</a>: Add a Game</h1>
     <hr>
 
     Enter the full url of the forum thread to be added:
-    <input id="textUrl" type="text" name="textUrl" value="{{ defaultUrl }}" maxlength="256"/>
-    <button type="button" id="addButton">Add</button><p/>
-
-    <div id="loading">
-        <img src="/static/loading.gif" class="loadingImg">Loading games list from forum...
-    </div>
-
-    <div id="gameListContainer">
-        Or select the game from the list:
-        <div id="gameList">
-            <ul></ul>
-        </div>
-    </div>
-	<div>
-	    <input id="isAlreadyStarted" type="checkbox" name="isAlreadyStarted" value="yes" /> Has this game already filled (e.g. signups are closed)?
-	</div>
-    {% csrf_token %}
-
-<!-- DIALOG MODAL FOR MANUAL UPDATE -->
-    <div class="modal fade" id="dialog" tabindex="-1" role="dialog" aria-labelledby="dialog-label">
-      <div class="modal-dialog" role="document">
-          <div class="modal-content">
-              <div class="modal-header">
-                  <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                  <h4 class="modal-title" id="dialog-label">Adding Game</h4>
-              </div>
-          <div class="modal-body" id="dialog-content">
-              </div>
-          </div>
-        </div>
-    </div>
+    <form action="/add_game" method="POST">
+        <input id="textURL" type="text" name="textURL" maxlength="256"/>
+        <p>Is the game still recruiting, or has it started?</p>
+        <label for="pregame">Game is recruiting</label>
+        <input type="radio" id="pregame" name="isAlreadyStarted" value="pregame" checked="checked"/>
+        <label for="started">Game is active</label>
+        <input type="radio" id="started" name="isAlreadyStarted" value="started" />
+        
+        <button type="submit" id="addButton">Add</button>
+        {% csrf_token %}
+    </form>
 {% endblock %}

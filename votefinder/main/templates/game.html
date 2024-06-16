@@ -1,4 +1,6 @@
 {% extends "base.html" %}
+{% load access_settings %}
+{% load votecount_html %}
 {% block title %}{{ game.name|safe }}{% endblock %}
 
 {% block script %}
@@ -48,15 +50,10 @@ $(document).ready(function () {
     });
 
     $('#voteImgButton').click(function () {
-        prompt("Copy and paste the following BBCode to make an auto-updating votecount image:", "[url=https://votefinder.org{{ game.get_absolute_url }}#votecount][img]https://votefinder.org/img/{{ game.slug }}[/img][/url]");
+        prompt("Copy and paste the following BBCode to make an auto-updating votecount image:", "[url=https://{% access_settings "VF_PRIMARY_DOMAIN" %}{{ game.get_absolute_url }}#votecount][img]https://{% access_settings "VF_PRIMARY_DOMAIN" %}/img/{{ game.slug }}[/img][/url]");
     });
     $('.button').button();
     $('#refreshbutton').button();
-	{% if game.state != 'pregame' %}
-    $('#votecount_contents').load('/votecount/{{ game.id }}', function () {
-        $('.button').button();
-    });
-	{% endif %}
     $.get('/post_histories/{{ game.id }}', function (data) {
         $('#playerPostHistories').html(data);
     });
@@ -75,9 +72,6 @@ $(document).ready(function () {
             var state = $(this).attr('id');
             $.ajax({ url: '/player_state/{{ game.id }}/' + uid + '/' + state })
                 .done(function () {
-                    $('#votecount_contents').load('/votecount/{{ game.id }}', function () {
-                        $('.button').button();
-                    });
                     $.get('/post_histories/{{ game.id }}', function (data) {
                         $('#playerPostHistories').html(data);
                     });
@@ -170,7 +164,7 @@ $(document).ready(function () {
             function (data) {
                 removing.parent().parent().remove();
                 if ($(".resolver").length == 0 || data.refresh == true) {
-                    $('#votecount_contents').load('/votecount/{{ game.id }}', function () { $('.button').button(); });
+
                 }
             }
         );
@@ -194,6 +188,12 @@ $(document).ready(function () {
             <a title="Votecount Image" class="button btn btn-sm btn-default" id="voteImgButton"><i class="fa fa-image"></i></a>
             <a title="Update" href="#" id="updateButton" class="btn btn-sm btn-default"><i class="fa fa-refresh"></i></a>
             <a title="Vote Chart" class="button btn btn-sm btn-default" href="/votechart/{{ game.slug }}"><i class="fa fa-bar-chart"></i></a>
+        {% endif %}
+        {% access_settings "VF_DEBUG" as debug %}
+        {% if user.is_superuser and debug %}
+            <br>
+            <p>Debug is {{ debug }} -  be careful!</p>
+            <a href="/debug/delete/{{game.id}}">Delete this game!</a>
         {% endif %}
     </div>
     <hr>
@@ -733,7 +733,21 @@ $(document).ready(function () {
         {% if game.state == 'pregame' %}
             <div id="message">The game has not yet started! You can visit the <a title="Open Thread" target="_blank" href="{% if game.home_forum == 'sa' %}https://forums.somethingawful.com/showthread.php?threadid={{ game.thread_id }}{% elif game.home_forum == 'bnr' %}https://breadnroses.net/threads/{{ game.thread_id }}{% endif %}">thread</a> if you'd like to sign up.</div>
         {% else %}
-            <div id="votecount_contents"><img src="/static/loading.gif" class="loadingImg"/>Generating votecount...</div>
+            <div id="votecount_contents"><div class="well" valign="top" id="votecount-well" style="word-wrap: break-word;">
+                <div class="row">
+                    <div class="col-md-9">
+                        <div style="float:right; margin: 0.5em;">
+                            {% if post_vc_button %}
+                            <button class="button btn btn-default" id="post-vc-button">Post Votecount</button>
+                            {% endif %}
+                        </div>
+                        <div id="votecount-results">{% votecount_html vc %}</div>
+                    </div>
+                    <div class="col-md-3">
+                        <textarea id="bbcode" class="form-control">{{ bbcode_votecount }}</textarea>
+                    </div>
+                </div>
+            </div></div>
         {% endif %}
     </div>
 

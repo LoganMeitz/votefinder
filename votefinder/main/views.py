@@ -1,9 +1,10 @@
 import json as simplejson
 import math
 import random
-import re
 import requests
 import urllib
+import re
+
 from datetime import datetime, timedelta
 from math import ceil
 
@@ -19,7 +20,8 @@ from django.http import (HttpResponse, HttpResponseForbidden,
                          HttpResponseNotFound, HttpResponseRedirect)
 from django.shortcuts import get_list_or_404, get_object_or_404, render, redirect
 from django.template.context_processors import csrf
-from PIL import Image, ImageDraw, ImageFont
+
+from PIL import Image
 from votefinder.main.models import (AddCommentForm, AddFactionForm, AddPlayerForm,  # noqa: WPS235
                                     Alias, BlogPost, Comment, Game, GameDay,
                                     GameFaction, GameStatusUpdate, Player,
@@ -29,6 +31,8 @@ from votefinder.main.models import (AddCommentForm, AddFactionForm, AddPlayerFor
 from votefinder.main import (SAForumPageDownloader, SAGameListDownloader, SAPageParser,
                              VoteCounter, VotecountFormatter, BNRGameListDownloader,
                              BNRPageParser, BNRApi)
+
+from .votecount_image_generation import votecount_to_image
 
 
 def check_mod(request, game):
@@ -67,48 +71,61 @@ def add(request):
 def add_game(request):
     return_status = {'success': True, 'message': 'Success!', 'url': ''}
     if request.method == 'POST':
-        threadid = request.POST.get('threadid')
-        state = request.POST.get('addState')
-        home_forum = request.POST.get('home_forum')
-        if state in {'started', 'pregame'}:
-            try:
-                game = Game.objects.get(thread_id=threadid, home_forum=home_forum)
-                return_status['url'] = game.get_absolute_url()
-            except Game.DoesNotExist:
-                if home_forum == 'bnr':
-                    page_parser = BNRPageParser.BNRPageParser()
-                elif home_forum == 'sa':
-                    page_parser = SAPageParser.SAPageParser()
-                else:
-                    return_status['success'] = False
-                    return_status['message'] = "Couldn't determine the parent forum or unsupported parent forum. Sorry!"
-                    return HttpResponse(simplejson.dumps(return_status), content_type='application/json')
-                page_parser.user = request.user
-                game = page_parser.add_game(threadid, state)
-                if game:
-                    return_status['url'] = game.get_absolute_url()
-                    game.status_update('A new game was created by {}!'.format(game.moderator.name))
+        # request contains two keys: textURL, and isAlreadyStarted
+        # technically also contains the CSRF token but, not pertinent here
+        print(request.POST)
+        if 'breadnroses.net' in request.POST['textURL']:
+            home_forum = 'bnr'
+            id_regex = re.compile(r'threads\/.*\.(\d*)\/')
+            thread_id = re.search(id_regex, request.POST['textURL']).group(1)
+        elif 'forums.somethingawful.com' in request.POST['textURL']:
+            home_forum = 'sa'
+            id_regex = re.compile(r'threadid=(\d*)')
+            thread_id = re.search(id_regex, request.POST['textURL']).group(1)
 
-                    if game.home_forum == 'sa':
-                        message_data = {'content': '{} has opened {}. Thread link: https://forums.somethingawful.com/showthread.php?threadid={}'.format(game.moderator.name, game.name, game.thread_id), 'username': 'Votefinder Game Announcement'}
-                        session = requests.Session()
-                        session.post('https://discordapp.com/api/webhooks/{}/{}'.format(settings.VF_SA_DISCORD_CHANNEL, settings.VF_SA_DISCORD_WEBHOOK), data=message_data)  # TODO issue 198
-                else:
-                    return_status['success'] = False
-                    return_status['message'] = "Couldn't download or parse the forum thread.  Sorry!"
-        else:
-            return_status['success'] = False
-            return_status['message'] = "Couldn\'t validate the starting game state. Please contact support."
+        state = request.POST['isAlreadyStarted']
+
+
+        try:
+            game = Game.objects.get(thread_id=thread_id, home_forum=home_forum)
+            return redirect(game.get_absolute_url())
+
+        except Game.DoesNotExist:
+            if home_forum == 'bnr':
+                page_parser = BNRPageParser.BNRPageParser()
+            elif home_forum == 'sa':
+                page_parser = SAPageParser.SAPageParser()
+            else:
+                return_status['success'] = False
+                return_status['message'] = "Couldn't determine the parent forum or unsupported parent forum. Sorry!"
+                return HttpResponse(simplejson.dumps(return_status), content_type='application/json')
+            page_parser.user = request.user
+            game = page_parser.add_game(thread_id, state)
+            if game:
+                return_status['url'] = game.get_absolute_url()
+                game.status_update(f'A new game was created by {game.moderator.name}!')
+
+                if game.home_forum == 'sa':
+                    message_data = {'content': f'{game.moderator.name} has opened {game.name}. Thread link: https://forums.somethingawful.com/showthread.php?threadid={game.thread_id}', 'username': 'Votefinder Game Announcement'}
+                    session = requests.Session()
+                    session.post(f'https://discordapp.com/api/webhooks/{settings.VF_SA_DISCORD_CHANNEL}/{settings.VF_SA_DISCORD_WEBHOOK}', data=message_data)  # TODO issue 198
+
+                return redirect(game.get_absolute_url())
+            else:
+                return_status['success'] = False
+                return_status['message'] = "Couldn't download or parse the forum thread.  Sorry!"
+
     else:
         return_status['success'] = False
         return_status['message'] = 'Form was submitted incorrectly. Please use the add game page.'
+
     return HttpResponse(simplejson.dumps(return_status), content_type='application/json')
 
 
 @login_required
 def game_list(request, page):
     downloader = SAGameListDownloader.SAGameListDownloader()
-    downloader.get_game_list('http://forums.somethingawful.com/forumdisplay.php?forumid=103&pagenumber={}'.format(page))
+    downloader.get_game_list(f'http://forums.somethingawful.com/forumdisplay.php?forumid=103&pagenumber={page}')
     bnr = BNRGameListDownloader.BNRGameListDownloader()
     bnr.get_game_list(page)
     downloader.GameList.extend(bnr.GameList)
@@ -132,9 +149,9 @@ def game(request, slug):
     gameday = game.days.select_related().last()
 
     # detecting games that are missing posts
-    if gameday == None:
+    if gameday is None:
         context = {'game': game, 'players': players, 'moderator': check_mod(request, game), 'form': form,
-               'comment_form': comment_form, 'broken': True}
+                   'comment_form': comment_form, 'broken': True}
         return render(request, 'game_broken.html', context)
 
     manual_votes = Vote.objects.filter(game=game, manual=True, post__id__gte=gameday.start_post.id).order_by('id')
@@ -158,11 +175,15 @@ def game(request, slug):
         player_state = False
 
     post_vc_button = bool(check_mod(request, game) and (game.last_vc_post is None or datetime.now() - game.last_vc_post >= timedelta(minutes=60) or (game.deadline and game.deadline - datetime.now() <= timedelta(minutes=60))))
+
+    vc_formatter = VotecountFormatter.VotecountFormatter(game)
+    vc_formatter.go()
+
     context = {'game': game, 'players': players, 'moderator': check_mod(request, game), 'form': form,
                'comment_form': comment_form, 'gameday': gameday, 'post_vc_button': post_vc_button,
                'nextDay': gameday.day_number + 1, 'deadline': deadline, 'templates': templates,
                'manual_votes': manual_votes, 'timezone': tzone, 'common_timezones': common_timezones,
-               'updates': updates, 'playerstate': player_state, 'faction_form': faction_form, 'broken': False}
+               'updates': updates, 'playerstate': player_state, 'faction_form': faction_form, 'broken': False, 'vc': vc_formatter, 'bbcode_votecount': vc_formatter.get_bbcode()}
     return render(request, 'game.html', context)
 
 
@@ -255,24 +276,24 @@ def claim_player(request, playerid):
                 if player.sa_uid is not None:
                     downloader = SAForumPageDownloader.SAForumPageDownloader()
                     page_data = downloader.download(
-                        'https://forums.somethingawful.com/member.php?action=getinfo&userid={}'.format(player.sa_uid))
+                        f'https://forums.somethingawful.com/member.php?action=getinfo&userid={player.sa_uid}')
 
                     if page_data is None:
-                        messages.add_message(request, messages.ERROR, 'There was a problem downloading the profile for the SA user {}.'.format(player.sa_uid))
+                        messages.add_message(request, messages.ERROR, f'There was a problem downloading the profile for the SA user {player.sa_uid}.')
 
                     if page_data.find(str(request.session['claim_key'])) == -1:
-                        messages.add_message(request, messages.ERROR, "Unable to find the correct key ({}) in {}'s SA profile".format(request.session['claim_key'], player.sa_uid))
+                        messages.add_message(request, messages.ERROR, f"Unable to find the correct key ({request.session['claim_key']}) in {player.sa_uid}'s SA profile")
                     else:
                         validated = True
                 elif player.bnr_uid is not None:
                     api = BNRApi.BNRApi()
                     user_profile = api.get_user_by_id(player.bnr_uid)
                     if user_profile is None:
-                        messages.add_message(request, messages.ERROR, 'There was a problem downloading the profile for the BNR user {}.'.format(player.bnr_uid))
+                        messages.add_message(request, messages.ERROR, f'There was a problem downloading the profile for the BNR user {player.bnr_uid}.')
                     if user_profile['location'] == str(request.session['claim_key']):
                         validated = True
                     else:
-                        messages.add_message(request, messages.ERROR, "Unable to find the correct key ({}) in {}'s BNR profile".format(request.session['claim_key'], player.bnr_uid))
+                        messages.add_message(request, messages.ERROR, f"Unable to find the correct key ({request.session['claim_key']}) in {player.bnr_uid}'s BNR profile")
                 if validated:
                     # TODO make this into a queued job via Rabbit or Celery or something - https://buildwithdjango.com/blog/post/celery-progress-bars/ - I don't need progress bars but a come back later'd be nice
                     Game.objects.filter(moderator=player).update(moderator=request.user.profile.player)
@@ -287,9 +308,9 @@ def claim_player(request, playerid):
                         request.user.profile.player.bnr_uid = player.bnr_uid
                     player.delete()
                     request.user.profile.player.save()
-                    messages.add_message(request, messages.SUCCESS, '<strong>Done!</strong> You have successfully claimed {}.'.format(player.name))
+                    messages.add_message(request, messages.SUCCESS, f'<strong>Done!</strong> You have successfully claimed {player.name}.')
                     return HttpResponseRedirect('/profile')
-                return HttpResponseRedirect('/player/{}'.format(player.slug))
+                return HttpResponseRedirect(f'/player/{player.slug}')
             return HttpResponseNotFound
         claim_key = random.randint(10000000, 99999999)  # noqa: S311
         request.session['claim_key'] = claim_key  # see auth/views.py. yes, i'm stealing it, just without a form afterwards
@@ -312,7 +333,7 @@ def player_state(request, gameid, playerid, state):
 
     if state == 'dead':
         current_state.set_dead()
-        game.status_update('{} died.'.format(player.name))
+        game.status_update(f'{player.name} died.')
     elif state == 'alive':
         current_state.set_alive()
     elif state == 'spectator':
@@ -355,13 +376,13 @@ def add_player(request, gameid):
             current_state.save()
             game.save()  # updated cached totals
         if created:
-            messages.add_message(request, messages.SUCCESS, '<strong>{}</strong> was added to the game.'.format(form.player))
+            messages.add_message(request, messages.SUCCESS, f'<strong>{form.player}</strong> was added to the game.')
         else:
             messages.add_message(request, messages.SUCCESS,
-                                 '<strong>{}</strong> was already in the game, but they have been set to alive.'.format(form.player))
+                                 f'<strong>{form.player}</strong> was already in the game, but they have been set to alive.')
     else:
         messages.add_message(request, messages.ERROR,
-                             'Unable to find a player named <strong>{}</strong>.'.format(form.data['name']))
+                             f'Unable to find a player named <strong>{form.data["name"]}</strong>.')
 
     return HttpResponseRedirect(game.get_absolute_url())
 
@@ -377,7 +398,7 @@ def add_faction(request, gameid):
     if form.is_valid():
         current_faction, created = GameFaction.objects.get_or_create(game=game, faction_name=form.cleaned_data['faction_name'], faction_type=form.cleaned_data['faction_type'])
         if created:
-            messages.add_message(request, messages.SUCCESS, '<strong>{}</strong> was created!'.format(current_faction.faction_name))
+            messages.add_message(request, messages.SUCCESS, f'<strong>{current_faction.faction_name}</strong> was created!')
         else:
             messages.add_message(request, messages.ERROR, 'Something went wrong, and the faction could not be added.')
     else:
@@ -407,26 +428,27 @@ def delete_spectators(request, gameid):
     return HttpResponseRedirect(game.get_absolute_url())
 
 
-def votecount(request, gameid):
-    game = get_object_or_404(Game, id=gameid)
-    try:
-        votes = Vote.objects.select_related().filter(game=game, target=None, unvote=False, ignored=False, no_execute=False)
-        if votes:
-            players = sorted(game.all_players(), key=lambda player: player.player.name.lower())
-            return render(request, 'unresolved.html',
-                          {'game': game, 'votes': votes, 'players': players})
-    except Vote.DoesNotExist:
-        pass  # noqa: WPS420
+# def votecount(request, gameid):
+#     game = get_object_or_404(Game, id=gameid)
+#     try:
+#         votes = Vote.objects.select_related().filter(game=game, target=None, unvote=False, ignored=False, no_execute=False)
+#         if votes:
+#             players = sorted(game.all_players(), key=lambda player: player.player.name.lower())
+#             return render(request, 'unresolved.html',
+#                           {'game': game, 'votes': votes, 'players': players})
+#     except Vote.DoesNotExist:
+#         pass  # noqa: WPS420
 
-    vc_formatter = VotecountFormatter.VotecountFormatter(game)
-    vc_formatter.go()
+#     vc_formatter = VotecountFormatter.VotecountFormatter(game)
+#     vc_formatter.go()
 
-    post_vc_button = bool(check_mod(request, game) and (game.last_vc_post is None or datetime.now() - game.last_vc_post >= timedelta(
-        minutes=60) or (game.deadline and game.deadline - datetime.now() <= timedelta(minutes=60))))
-    context = {'post_vc_button': post_vc_button,
-               'html_votecount': vc_formatter.html_votecount,
-               'bbcode_votecount': vc_formatter.bbcode_votecount}
-    return render(request, 'votecount.html', context)
+#     post_vc_button = bool(check_mod(request, game) and (game.last_vc_post is None or datetime.now() - game.last_vc_post >= timedelta(
+#         minutes=60) or (game.deadline and game.deadline - datetime.now() <= timedelta(minutes=60))))
+
+#     context = {'post_vc_button': post_vc_button,
+#                'html_votecount': vc_formatter.get_html(),
+#                'bbcode_votecount': vc_formatter.get_bbcode()}
+#     return render(request, 'votecount.html', context)
 
 
 def resolve(request, voteid, resolution):
@@ -450,7 +472,7 @@ def resolve(request, voteid, resolution):
         if created:
             alias.save()
 
-    key = '{}-vc-image'.format(vote.game.slug)
+    key = f'{vote.game.slug}-vc-image'
     cache.delete(key)
 
     new_votes = Vote.objects.filter(game=vote.game, target_string__iexact=vote.target_string, target=None, unvote=False,
@@ -503,7 +525,7 @@ def add_comment(request, gameid):
             comment = Comment(comment=form.cleaned_data['comment'], player=request.user.profile.player, game=game)
             comment.save()
             game.status_update_noncritical(
-                '{} added a comment: {}'.format(request.user.profile.player, form.cleaned_data['comment']))
+                f'{request.user.profile.player} added a comment: {form.cleaned_data["comment"]}')
 
         messages.add_message(request, messages.SUCCESS, 'Your comment was added successfully.')
     else:
@@ -543,7 +565,7 @@ def deadline(request, gameid, month, day, year, hour, minute, ampm, tzname):
 
     if not prev_deadline:
         game.status_update_noncritical(
-            'A deadline has been set for {}.'.format(dl.strftime('%A, %B %d at %I:%M %p ') + dl.tzname()))  # noqa: WPS323 time formatting
+            f'A deadline has been set for {dl.strftime("%A, %B %d at %I:%M %p ") + dl.tzname()}.')  # noqa: WPS323 time formatting
 
     messages.add_message(request, messages.SUCCESS, 'The deadline was set successfully.')
     return HttpResponseRedirect(game.get_absolute_url())
@@ -562,7 +584,7 @@ def close_game(request, gameid):
     game.state = 'closed'
     game.save()
     if faction is not None:
-        game.status_update('The game is over. {} has won.'.format(faction.faction_name))
+        game.status_update(f'The game is over. {faction.faction_name} has won.')
     else:
         game.status_update('The game is over.')
 
@@ -605,7 +627,7 @@ def replace(request, gameid, clear, outgoing, incoming):
     try:
         player_in = Player.objects.get(name__iexact=urllib.parse.unquote(incoming))
     except Player.DoesNotExist:
-        messages.add_message(request, messages.ERROR, 'No player by the name <strong>{}</strong> was found!'.format(incoming))
+        messages.add_message(request, messages.ERROR, f'No player by the name <strong>{incoming}</strong> was found!')
         return HttpResponseRedirect(game.get_absolute_url())
 
     clear_votes = bool(clear == 'true')
@@ -613,7 +635,7 @@ def replace(request, gameid, clear, outgoing, incoming):
     try:
         player_state = PlayerState.objects.get(game=game, player=player_out)
     except PlayerState.DoesNotExist:
-        messages.add_message(request, messages.ERROR, 'The player <strong>{}</strong> is not in that game!'.format(player_out))
+        messages.add_message(request, messages.ERROR, f'The player <strong>{player_out}</strong> is not in that game!')
 
     try:
         new_player_state = PlayerState.objects.get(game=game, player=player_in)
@@ -621,7 +643,7 @@ def replace(request, gameid, clear, outgoing, incoming):
             new_player_state.delete()
         else:
             messages.add_message(request, messages.ERROR,
-                                 'The player <strong>{}</strong> is already in that game!'.format(player_in))
+                                 f'The player <strong>{player_in}</strong> is already in that game!')
             return HttpResponseRedirect(game.get_absolute_url())
     except PlayerState.DoesNotExist:
         pass  # noqa: WPS420
@@ -643,11 +665,11 @@ def replace(request, gameid, clear, outgoing, incoming):
                 vote.target = player_in
             vote.save()
 
-    game.status_update_noncritical('{} is replaced by {}.'.format(player_out, player_in))
+    game.status_update_noncritical(f'{player_out} is replaced by {player_in}.')
 
     messages.add_message(request, messages.SUCCESS,
-                         'Success! <strong>{}</strong> was replaced by <strong>{}</strong>.  {} votes were affected.'
-                         .format(player_out, player_in, votes_affected))
+                         f'Success! <strong>{player_out}</strong> was replaced by <strong>{player_in}</strong>.  {votes_affected} votes were affected.')
+
     return HttpResponseRedirect(game.get_absolute_url())
 
 
@@ -665,11 +687,10 @@ def start_day(request, day, postid):
     post.game.deadline = None
     post.game.save()
 
-    post.game.status_update('Day {} has begun!'.format(day))
+    post.game.status_update(f'Day {day} has begun!')
 
     messages.add_message(request, messages.SUCCESS,
-                         'Success! <strong>Day {}</strong> will now begin with post ({}) by {}.'
-                         .format(gameday.day_number, post.post_id, post.author))
+                         f'Success! <strong>Day {gameday.day_number}</strong> will now begin with post ({post.post_id}) by {post.author}.')
 
     return HttpResponseRedirect(post.game.get_absolute_url())
 
@@ -700,7 +721,7 @@ def create_template(request):
         new_temp.save()
 
         messages.add_message(request, messages.SUCCESS,
-                             'Success! The template <strong>{}</strong> was saved.'.format(new_temp.name))
+                             f'Success! The template <strong>{new_temp.name}</strong> was saved.')
         return HttpResponseRedirect('/templates')
     return render(request, 'template_edit.html', {'form': form})
 
@@ -733,7 +754,7 @@ def edit_template(request, templateid):
                     game.save()
 
         messages.add_message(request, messages.SUCCESS,
-                             'Success! The template <strong>{}</strong> was saved.'.format(new_temp.name))
+                             f'Success! The template <strong>{new_temp.name}</strong> was saved.')
         return HttpResponseRedirect('/templates')
     return render(request, 'template_edit.html', {'form': form, 'template': old_temp, 'edit': True})
 
@@ -770,8 +791,7 @@ def game_template(request, gameid, templateid):
     game.save()
 
     messages.add_message(request, messages.SUCCESS,
-                         '<strong>Success!</strong> This game now uses the template <strong>{}</strong>.'
-                         .format(template.name))
+                         f'<strong>Success!</strong> This game now uses the template <strong>{template.name}</strong>.')
     return HttpResponseRedirect(game.get_absolute_url())
 
 
@@ -803,7 +823,7 @@ def active_games_style(request, style):
 
 def active_games_json(request):
     game_list = sorted(({'name': game.name, 'mod': game.moderator.name,
-                        'url': 'http://forums.somethingawful.com/showthread.php?threadid={}'.format(game.thread_id)} for game in
+                        'url': f'http://forums.somethingawful.com/showthread.php?threadid={game.thread_id}'} for game in
                        Game.objects.select_related().filter(state='started')), key=lambda game_name: game['name'])
 
     return HttpResponse(simplejson.dumps(game_list), content_type='application/json')
@@ -865,116 +885,6 @@ def delete_vote(request, voteid):
     return HttpResponseRedirect(game.get_absolute_url())
 
 
-def draw_wordwrap_text(draw, text, xpos, ypos, max_width, font):
-    fill = (0, 0, 0, 255)
-    used_width = 0
-    max_width -= xpos
-    space_width, space_height = draw.textsize(' ', font=font)
-
-    text_size_x, text_size_y = draw.textsize(text, font=font)
-    remaining = max_width
-    output_text = []
-
-    for word in text.split(None):
-        word_width, word_height = draw.textsize(word, font=font)
-        if word_width + space_width > remaining:
-            output_text.append(word)
-            remaining = max_width - word_width
-        elif output_text:
-            output = output_text.pop()
-            output = '{} {}'.format(output, word)
-            output_text.append(output)
-            remaining = remaining - (word_width + space_width)
-        else:
-            output_text.append(word)
-            remaining = remaining - (word_width + space_width)
-
-    for text_element in output_text:
-        cur_width, cur_height = draw.textsize(text_element, font=font)
-        if (cur_width > used_width):
-            used_width = cur_width
-
-        draw.text((xpos, ypos), text_element, font=font, fill=fill)
-        ypos += text_size_y
-
-    return used_width + xpos, ypos
-
-
-def draw_votecount_text(draw, vc, xpos, ypos, max_width, font, bold_font):
-    votes_by_player = [voted_player for voted_player in vc.counted_votes if voted_player['count'] > 0]
-    longest_name = 0
-    divider_len_x, divider_len_y = draw.textsize(': ', font=font)
-    max_x = 0
-    if votes_by_player is None:  # No votes found
-        text = 'No votes found in vc.counted_votes~'
-        this_size_x, this_size_y = draw.textsize(text, font=bold_font)
-        return draw_wordwrap_text(draw, text, 0, ypos, max_width, bold_font)
-    for line in votes_by_player:
-        text = '{} ({})'.format(line['target'].name, line['count'])
-        this_size_x, this_size_y = draw.textsize(text, font=bold_font)
-        line['size'] = this_size_x
-        if this_size_x > longest_name:
-            longest_name = this_size_x
-
-    for line_again in votes_by_player:  # noqa: WPS426
-        pct = float(line_again['count']) / vc.toexecute
-        box_width = min(pct * longest_name, longest_name)
-        draw.rectangle([longest_name - box_width, ypos, longest_name, this_size_y + ypos],
-                       fill=(int(155 + (pct * 100)), 100, 100, int(pct * 255)))
-
-        text = '{} ({})'.format(line_again['target'].name, line_again['count'])
-        (x_size1, y_bottom1) = draw_wordwrap_text(draw, text, longest_name - line_again['size'], ypos, max_width, bold_font)
-
-        (x_size2, y_bottom2) = draw_wordwrap_text(draw, ': ', x_size1, ypos, max_width, font)
-
-        text = ', '.join(
-            [vote['author'].name for vote in filter(lambda vote: vote['unvote'] is False and vote['enabled'], line_again['votes'])])
-        (x_size3, y_bottom3) = draw_wordwrap_text(draw, text, x_size2 + divider_len_x, ypos, max_width, font)
-
-        max_x = max(max_x, x_size3)
-        ypos = max(y_bottom1, y_bottom2, y_bottom3)
-
-    return (max_x, ypos)
-
-
-def votecount_to_image(img, game, xpos=0, ypos=0, max_width=600):
-    draw = ImageDraw.Draw(img)
-    regular_font = ImageFont.truetype(settings.VF_REGULAR_FONT_PATH, 15)
-    bold_font = ImageFont.truetype(settings.VF_BOLD_FONT_PATH, 15)
-
-    # Reset game template to None to force use of the system default votecount template instead of whatever the game is actually set to
-    game.template = None
-
-    vc = VotecountFormatter.VotecountFormatter(game)
-    vc.go(show_comment=False)
-
-    split_vc = re.compile(r'\[.*?\]').sub('', vc.bbcode_votecount).split('\r\n')
-    header_text = split_vc[0]  # Explicitly take the first and last elements in case of multiline templates
-    footer_text = split_vc[-1]
-    (header_x_size, header_y_size) = draw_wordwrap_text(draw, header_text, 0, 0, max_width, bold_font)
-    draw.line([0, header_y_size - 2, header_x_size, header_y_size - 2], fill=(0, 0, 0, 255), width=2)
-    ypos = 2 * header_y_size
-
-    (vc_x_size, ypos) = draw_votecount_text(draw, vc, 0, ypos, max_width, regular_font, bold_font)
-    ypos += header_y_size
-
-    (x_size, ypos) = draw_wordwrap_text(draw, footer_text, 0, ypos, max_width, regular_font)
-
-    votes = Vote.objects.select_related().filter(game=game, target=None, unvote=False, ignored=False, no_execute=False)
-    if votes:
-        ypos += header_y_size
-        if len(votes) == 1:
-            warning_text = 'Warning: There is currently 1 unresolved vote.  The votecount may be inaccurate.'
-        else:
-            warning_text = 'Warning: There are currently {} unresolved votes.  The votecount may be inaccurate.'.format(len(
-                votes))
-
-        (warning_x, ypos) = draw_wordwrap_text(draw, warning_text, 0, ypos, max_width, bold_font)
-        x_size = max(x_size, warning_x)
-
-    return (max(header_x_size, vc_x_size, x_size), ypos)
-
-
 def check_update_game(game):
     if game.is_locked():
         return game
@@ -998,27 +908,35 @@ def check_update_game(game):
 def votecount_image(request, slug):
     game = get_object_or_404(Game, slug=slug)
 
-    key = '{}-vc-image'.format(slug)
-    img_dict = cache.get(key)
-
-    if img_dict is None:
+    if settings.DEBUG == True:
+        print("Debug - testing image generation")
+        # skip all the caching and just generate a fresh image for testing
         game = check_update_game(game)
-        img = Image.new('RGBA', (800, 1024), (255, 255, 255, 0))
-        (width, height) = votecount_to_image(img, game, 0, 0, 800)
-        img = img.crop((0, 0, width, height))
-        cache.set(key, {'size': img.size, 'data': img.tobytes()}, 120)
-    else:
-        img = Image.frombytes('RGBA', img_dict['size'], img_dict['data'])
+        img = votecount_to_image(game)
+        response = HttpResponse(content_type='image/png')
+        img.save(response, 'PNG')  # transparency=(255, 255, 255))
+        return response
 
-    response = HttpResponse(content_type='image/png')
-    img.save(response, 'PNG')  # transparency=(255, 255, 255))
-    return response
+    else:
+        key = f'{slug}-vc-image'
+        img_dict = cache.get(key)
+
+        if img_dict is None:
+            game = check_update_game(game)
+            img = votecount_to_image(game)
+            cache.set(key, {'size': img.size, 'data': img.tobytes()}, 120)
+        else:
+            img = Image.frombytes('RGB', img_dict['size'], img_dict['data'])
+
+        response = HttpResponse(content_type='image/png')
+        img.save(response, 'PNG')  # transparency=(255, 255, 255))
+        return response
 
 
 def autoupdate(request):
     games = Game.objects.exclude(state='closed').order_by('-last_updated')
     for game in games:
-        key = '{}-vc-image'.format(game.slug)
+        key = f'{game.slug}-vc-image'
         cache.delete(key)  # image will regenerate on next GET
         game = check_update_game(game)
         post = game.posts.order_by('-timestamp')[:1][0]
@@ -1070,11 +988,11 @@ def delete_alias(request, aliasid):
     if not request.user.is_superuser and request.user.profile.player != alias.player:
         return HttpResponseForbidden
 
-    messages.add_message(request, messages.SUCCESS, 'The alias <strong>{}</strong> was deleted.'.format(alias.alias))
+    messages.add_message(request, messages.SUCCESS, f'The alias <strong>{alias.alias}</strong> was deleted.')
     player = alias.player
     alias.delete()
 
-    return HttpResponseRedirect('/player/{}'.format(player.slug))
+    return HttpResponseRedirect(f'/player/{player.slug}')
 
 
 @login_required
@@ -1145,7 +1063,7 @@ def post_vc(request, gameid):
             dl = SAForumPageDownloader.SAForumPageDownloader()
         elif game.home_forum == 'bnr':
             dl = BNRApi.BNRApi()
-        dl.reply_to_thread(game.thread_id, vc_formatter.bbcode_votecount)
+        dl.reply_to_thread(game.thread_id, vc_formatter.get_bbcode())
         messages.add_message(request, messages.SUCCESS, 'Votecount posted.')
 
     return HttpResponseRedirect(game.get_absolute_url())
