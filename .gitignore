@@ -5,4 +5,5 @@
 .vscode/
 guni.log
 Pipfile
+Pipfile.lock
 /vfvenv
