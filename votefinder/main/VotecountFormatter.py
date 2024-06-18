@@ -89,20 +89,24 @@ class VotecountFormatter:
         votecount = ""
         template_single_line = Template(self.game_template.single_line + "\n")
         for x in self.game_state['votecounts_by_player']:
-            votelist = []
-            for vote in x['votes']:
-                if vote['unvote'] == True:
-                    votelist.append(f"[s]{vote['author']}[/s]")
-                elif vote['enabled'] == True:
-                    votelist.append(f"[url={vote['url']}]{vote['author']}[/url]")
-                else:
-                    votelist.append(f"{vote['author']}")
+            if len(x['votes']) > 0:
+                votelist = []
+                for vote in x['votes']:
+                    if vote['unvote'] == True:
+                        votelist.append(f"[s]{vote['author']}[/s]")
+                    elif vote['enabled'] == True:
+                        votelist.append(f"[url={vote['url']}]{vote['author']}[/url]")
+                    else:
+                        votelist.append(f"{vote['author']}")
 
-            votelist_string = ', '.join(votelist)
+                votelist_string = ', '.join(votelist)
 
-            ticks = (f"[img]{self.game_template.empty_tick}[/img]" * (self.to_execute - x['votes_received'])) + f"[img]{self.game_template.full_tick}[/img]" * x['votes_received']
+                # temporarily removing reference to tickmark images for consistency
+                # would like to rework template system to make these user-selectable but
+                # that's part of a larger votecount template rewrite
+                ticks = (f"⚪" * (self.to_execute - x['votes_received'])) + f"🟢" * x['votes_received']
 
-            votecount += template_single_line.render(context = Context({'ticks': ticks,'target': x['player_name'], 'count': x['votes_received'], 'votelist': votelist_string}))
+                votecount += template_single_line.render(context = Context({'ticks': ticks,'target': x['player_name'], 'count': x['votes_received'], 'votelist': votelist_string}))
 
         # Figure out deadline
         if self.game_state['deadline'] == '':
