@@ -43,6 +43,11 @@ var maxPages = {{ game.max_pages }};
 var pushed = false;
 $(document).ready(function () {
 
+    /* Something about how django renders the bbcode template is very resistant
+     to being marked as safe - this is a bodge to make things output appropriately
+     until templates can just be fully reworked */
+    $('#bbcode')[0].innerHTML = $('#bbcode')[0].innerHTML.replaceAll('amp;', '');
+
     $('#dialog').modal('hide');
     $('#liveThread').button();
     $('#updateButton').button().click(function () {
@@ -744,7 +749,7 @@ $(document).ready(function () {
                         <div id="votecount-results">{% votecount_html vc %}</div>
                     </div>
                     <div class="col-md-3">
-                        <textarea id="bbcode" class="form-control">{{ bbcode_votecount }}</textarea>
+                        <textarea id="bbcode" class="form-control">{{ bbcode_votecount|safe|escape }}</textarea>
                     </div>
                 </div>
             </div></div>
