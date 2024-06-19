@@ -104,7 +104,7 @@ class VotecountFormatter:
                 # temporarily removing reference to tickmark images for consistency
                 # would like to rework template system to make these user-selectable but
                 # that's part of a larger votecount template rewrite
-                ticks = (f"⚪" * (self.to_execute - x['votes_received'])) + f"🟢" * x['votes_received']
+                ticks = (f"x" * (self.to_execute - x['votes_received'])) + f"O" * x['votes_received']
 
                 votecount += template_single_line.render(context = Context({'ticks': ticks,'target': x['player_name'], 'count': x['votes_received'], 'votelist': votelist_string}))
 
