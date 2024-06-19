@@ -72,7 +72,7 @@ class SAForumPageDownloader():
         if page_data is None:
             return False  # Could not retrieve anything from the page.
 
-        soup = BeautifulSoup(page_data, 'html.parser')
+        soup = BeautifulSoup(page_data, 'html5lib')
 
         inputs = {'message': message}
         for input_element in soup.find_all('input', {'value': True}):
