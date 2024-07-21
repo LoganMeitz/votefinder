@@ -34,6 +34,9 @@ from votefinder.main import (SAForumPageDownloader, SAGameListDownloader, SAPage
 
 from .votecount_image_generation import votecount_to_image
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 def check_mod(request, game):
     try:
@@ -182,6 +185,10 @@ def game(request, slug):
     ## determining if there are unresolved votes
 
     unresolved_votes = game.get_unresolved_votes()
+
+    if settings.VF_DEBUG == True:
+        bbcode = vc_formatter.get_bbcode()
+        logger.debug(bbcode)
 
     context = {'game': game, 'players': players.order_by("player__name"), 'moderator': check_mod(request, game), 'form': form,
                'comment_form': comment_form, 'gameday': gameday, 'post_vc_button': post_vc_button,

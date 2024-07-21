@@ -13,6 +13,9 @@ from votefinder.main.models import Comment, VotecountTemplate
 
 from votefinder.main import VoteCounter
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 class VotecountFormatter:
     def __init__(self, game):
@@ -83,6 +86,8 @@ class VotecountFormatter:
     # It might be nice to replace this with another inclusion tag, like how
     # the HTML votecount is generated - this works for now, though
     def get_bbcode(self):
+        if settings.VF_DEBUG == True:
+            logger.debug("Have called get_bbcode")
         game_template = Template(self.game_template.overall)
         
         # Get together individual votecount lines
@@ -104,7 +109,7 @@ class VotecountFormatter:
                 # temporarily removing reference to tickmark images for consistency
                 # would like to rework template system to make these user-selectable but
                 # that's part of a larger votecount template rewrite
-                ticks = (f"x" * (self.to_execute - x['votes_received'])) + f"O" * x['votes_received']
+                ticks = (f"⚪" * (self.to_execute - x['votes_received'])) + f"🟢" * x['votes_received']
 
                 votecount += template_single_line.render(context = Context({'ticks': ticks,'target': x['player_name'], 'count': x['votes_received'], 'votelist': votelist_string}))
 
@@ -116,6 +121,9 @@ class VotecountFormatter:
                 'deadline': self.game_state['deadline'],
                 'timeuntildeadline': self.game_state['until_deadline']
             }))
+
+        if settings.VF_DEBUG == True:
+            logger.debug("Have called get_bbcode")
 
         return game_template.render(context = Context({
             'day': self.game_state['gameday'],
