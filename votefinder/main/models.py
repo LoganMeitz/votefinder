@@ -206,6 +206,13 @@ class Game(models.Model):
 
     def winning_faction(self):
         return self.factions.get(winning=True)
+    
+    # Gets a list (really, a Queryset) of unresolved votes
+    # if no votes are unresolved, returns None
+    def get_unresolved_votes(self):
+        unresolved_votes = self.votes.filter(target=None, unvote=False, ignored=False, no_execute=False)
+
+        return unresolved_votes if len(unresolved_votes) > 0 else None
 
     class Meta:
         unique_together = ('thread_id', 'home_forum')

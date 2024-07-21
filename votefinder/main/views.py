@@ -179,11 +179,15 @@ def game(request, slug):
     vc_formatter = VotecountFormatter.VotecountFormatter(game)
     vc_formatter.go()
 
-    context = {'game': game, 'players': players, 'moderator': check_mod(request, game), 'form': form,
+    ## determining if there are unresolved votes
+
+    unresolved_votes = game.get_unresolved_votes()
+
+    context = {'game': game, 'players': players.order_by("player__name"), 'moderator': check_mod(request, game), 'form': form,
                'comment_form': comment_form, 'gameday': gameday, 'post_vc_button': post_vc_button,
                'nextDay': gameday.day_number + 1, 'deadline': deadline, 'templates': templates,
                'manual_votes': manual_votes, 'timezone': tzone, 'common_timezones': common_timezones,
-               'updates': updates, 'playerstate': player_state, 'faction_form': faction_form, 'broken': False, 'vc': vc_formatter, 'bbcode_votecount': vc_formatter.get_bbcode()}
+               'updates': updates, 'playerstate': player_state, 'faction_form': faction_form, 'broken': False, 'vc': vc_formatter, 'bbcode_votecount': vc_formatter.get_bbcode(), 'unresolved_votes': unresolved_votes}
     return render(request, 'game.html', context)
 
 
