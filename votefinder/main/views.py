@@ -1059,6 +1059,9 @@ def post_vc(request, gameid):
     game = get_object_or_404(Game, id=gameid)
     if game.state != 'started' or not check_mod(request, game):
         print("Not posting votecount")
+        # This crashes if actually reached - not a huge issue for now
+        # because it shouldn't ever happen
+        # ... but I really should investigate this
         return HttpResponseForbidden
 
     if game.last_vc_post is not None and datetime.now() - game.last_vc_post < timedelta(minutes=60) and (game.deadline and game.deadline - datetime.now() > timedelta(minutes=60)):
