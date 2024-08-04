@@ -81,31 +81,13 @@ class SAForumPageDownloader():
 
         inputs = {'message': message}
 
-        print(type(inputs['message']))
-
-        # doing the converstion to Windows-1252 here
-        # SA's DB stores characters in Windows-1252, which makes using
-        # emoji in a reply challenging
-
-        # if settings.VF_DEBUG == True:
-        #     logger.debug("Attempting to make a post but logging it instead.\nPost is:")
-        #     logger.debug(inputs)
-
-        # inputs['message'] = inputs['message'].encode('cp1252')
-
         for input_element in soup.find_all('input', {'value': True}):
             inputs[input_element['name']] = input_element['value']
 
         if not inputs['disablesmilies']:
-            print("Thread appears locked?")
             return False  # Thread is locked.
+        
         inputs.pop('disablesmilies')
         inputs.pop('preview')
-
-        # if settings.VF_DEBUG == True:
-        #     logger.debug("Post-encoding, post is:")
-        #     logger.debug(inputs)
-
-        # else:
 
         self.session.post(post_url, inputs)

@@ -106,9 +106,6 @@ class VotecountFormatter:
 
                 votelist_string = ', '.join(votelist)
 
-                # temporarily removing reference to tickmark images for consistency
-                # would like to rework template system to make these user-selectable but
-                # that's part of a larger votecount template rewrite
                 ticks = (f"⚪" * (self.to_execute - x['votes_received'])) + f"🟢" * x['votes_received']
 
                 votecount += template_single_line.render(context = Context({'ticks': ticks,'target': x['player_name'], 'count': x['votes_received'], 'votelist': votelist_string}))
@@ -132,16 +129,12 @@ class VotecountFormatter:
         }))
 
     # get_bbcode is used to get the BBCode formatted for posting on the website
-    # as well as to B&R - this is explicitly called to do a find-and-replace
-    # to pop out HTML-escaped unicode that Votefinder will nicely post in
-    # a thread
+    # as well as to B&R - this function is instead  explicitly called to do
+    # a find-and-replace to pop out HTML-escaped unicode that Votefinder will
+    # nicely post in a thread
     def get_escaped_bbcode(self):
         to_replace = self.get_bbcode()
-        print(type(to_replace))
         to_replace = to_replace.replace("amp;","")
         to_replace = to_replace.replace("🟢","&#x1F7E2;")
         to_replace = to_replace.replace("⚪","&#x26AA;")
-        print("After replacement, code is:")
-        print(to_replace)
-        print(type(to_replace))
         return to_replace
