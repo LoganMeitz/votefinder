@@ -1058,11 +1058,13 @@ def ecco_mode(request, gameid, enabled):
 def post_vc(request, gameid):
     game = get_object_or_404(Game, id=gameid)
     if game.state != 'started' or not check_mod(request, game):
+        print("Not posting votecount")
         return HttpResponseForbidden
 
-    if game.last_vc_post is not None and datetime.now() - game.last_vc_post < timedelta(minutes=60) and (game.deadline and game.deadline - datetime.now() > timedelta(minutes=60)):
-        messages.add_message(request, messages.ERROR, 'Votefinder has posted too recently in that game.')
-    else:
+    # temporarily disabling this check - really need to uncomment this later
+    # if game.last_vc_post is not None and datetime.now() - game.last_vc_post < timedelta(minutes=60) and (game.deadline and game.deadline - datetime.now() > timedelta(minutes=60)):
+    #     messages.add_message(request, messages.ERROR, 'Votefinder has posted too recently in that game.')
+    if True:
         game.last_vc_post = datetime.now()
         game.save()
 
@@ -1071,13 +1073,16 @@ def post_vc(request, gameid):
         vc_formatter = VotecountFormatter.VotecountFormatter(game)
         vc_formatter.go()
         if game.home_forum == 'sa':
+            print("Posting to thread...")
             dl = SAForumPageDownloader.SAForumPageDownloader()
+            dl.reply_to_thread(game.thread_id, vc_formatter.get_escaped_bbcode())
         elif game.home_forum == 'bnr':
             dl = BNRApi.BNRApi()
-        dl.reply_to_thread(game.thread_id, vc_formatter.get_bbcode())
+            dl.reply_to_thread(game.thread_id, vc_formatter.get_bbcode())
+
         messages.add_message(request, messages.SUCCESS, 'Votecount posted.')
 
-    return HttpResponseRedirect(game.get_absolute_url())
+    return redirect(game.get_absolute_url())
 
 
 def votechart_all(request, gameslug):

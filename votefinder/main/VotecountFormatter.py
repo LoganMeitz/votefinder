@@ -122,9 +122,6 @@ class VotecountFormatter:
                 'timeuntildeadline': self.game_state['until_deadline']
             }))
 
-        if settings.VF_DEBUG == True:
-            logger.debug("Have called get_bbcode")
-
         return game_template.render(context = Context({
             'day': self.game_state['gameday'],
             'votecount': votecount,
@@ -134,3 +131,17 @@ class VotecountFormatter:
             'deadline': deadline
         }))
 
+    # get_bbcode is used to get the BBCode formatted for posting on the website
+    # as well as to B&R - this is explicitly called to do a find-and-replace
+    # to pop out HTML-escaped unicode that Votefinder will nicely post in
+    # a thread
+    def get_escaped_bbcode(self):
+        to_replace = self.get_bbcode()
+        print(type(to_replace))
+        to_replace = to_replace.replace("amp;","")
+        to_replace = to_replace.replace("🟢","&#x1F7E2;")
+        to_replace = to_replace.replace("⚪","&#x26AA;")
+        print("After replacement, code is:")
+        print(to_replace)
+        print(type(to_replace))
+        return to_replace
