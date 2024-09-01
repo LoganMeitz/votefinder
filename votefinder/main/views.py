@@ -34,6 +34,9 @@ from votefinder.main import (SAForumPageDownloader, SAGameListDownloader, SAPage
 
 from .votecount_image_generation import votecount_to_image
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 def check_mod(request, game):
     try:
@@ -179,11 +182,19 @@ def game(request, slug):
     vc_formatter = VotecountFormatter.VotecountFormatter(game)
     vc_formatter.go()
 
-    context = {'game': game, 'players': players, 'moderator': check_mod(request, game), 'form': form,
+    ## determining if there are unresolved votes
+
+    unresolved_votes = game.get_unresolved_votes()
+
+    if settings.VF_DEBUG == True:
+        bbcode = vc_formatter.get_bbcode()
+        logger.debug(bbcode)
+
+    context = {'game': game, 'players': players.order_by("player__name"), 'moderator': check_mod(request, game), 'form': form,
                'comment_form': comment_form, 'gameday': gameday, 'post_vc_button': post_vc_button,
                'nextDay': gameday.day_number + 1, 'deadline': deadline, 'templates': templates,
                'manual_votes': manual_votes, 'timezone': tzone, 'common_timezones': common_timezones,
-               'updates': updates, 'playerstate': player_state, 'faction_form': faction_form, 'broken': False, 'vc': vc_formatter, 'bbcode_votecount': vc_formatter.get_bbcode()}
+               'updates': updates, 'playerstate': player_state, 'faction_form': faction_form, 'broken': False, 'vc': vc_formatter, 'bbcode_votecount': vc_formatter.get_bbcode(), 'unresolved_votes': unresolved_votes}
     return render(request, 'game.html', context)
 
 
@@ -1047,11 +1058,15 @@ def ecco_mode(request, gameid, enabled):
 def post_vc(request, gameid):
     game = get_object_or_404(Game, id=gameid)
     if game.state != 'started' or not check_mod(request, game):
+        print("Not posting votecount")
+        # This crashes if actually reached - not a huge issue for now
+        # because it shouldn't ever happen
+        # ... but I really should investigate this
         return HttpResponseForbidden
 
     if game.last_vc_post is not None and datetime.now() - game.last_vc_post < timedelta(minutes=60) and (game.deadline and game.deadline - datetime.now() > timedelta(minutes=60)):
         messages.add_message(request, messages.ERROR, 'Votefinder has posted too recently in that game.')
-    else:
+    if True:
         game.last_vc_post = datetime.now()
         game.save()
 
@@ -1061,12 +1076,14 @@ def post_vc(request, gameid):
         vc_formatter.go()
         if game.home_forum == 'sa':
             dl = SAForumPageDownloader.SAForumPageDownloader()
+            dl.reply_to_thread(game.thread_id, vc_formatter.get_escaped_bbcode())
         elif game.home_forum == 'bnr':
             dl = BNRApi.BNRApi()
-        dl.reply_to_thread(game.thread_id, vc_formatter.get_bbcode())
+            dl.reply_to_thread(game.thread_id, vc_formatter.get_bbcode())
+
         messages.add_message(request, messages.SUCCESS, 'Votecount posted.')
 
-    return HttpResponseRedirect(game.get_absolute_url())
+    return redirect(game.get_absolute_url())
 
 
 def votechart_all(request, gameslug):

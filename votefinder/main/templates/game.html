@@ -46,7 +46,9 @@ $(document).ready(function () {
     /* Something about how django renders the bbcode template is very resistant
      to being marked as safe - this is a bodge to make things output appropriately
      until templates can just be fully reworked */
-    $('#bbcode')[0].innerHTML = $('#bbcode')[0].innerHTML.replaceAll('amp;', '');
+    if ($('#bbcode').length > 0 ){
+        $('#bbcode')[0].innerHTML = $('#bbcode')[0].innerHTML.replaceAll('amp;', '');
+    }
 
     $('#dialog').modal('hide');
     $('#liveThread').button();
@@ -737,6 +739,28 @@ $(document).ready(function () {
     <div id="votecount" class="tab-pane fade{% if game.state != 'closed' or not moderator %} in active{% endif %}">
         {% if game.state == 'pregame' %}
             <div id="message">The game has not yet started! You can visit the <a title="Open Thread" target="_blank" href="{% if game.home_forum == 'sa' %}https://forums.somethingawful.com/showthread.php?threadid={{ game.thread_id }}{% elif game.home_forum == 'bnr' %}https://breadnroses.net/threads/{{ game.thread_id }}{% endif %}">thread</a> if you'd like to sign up.</div>
+
+        {% elif unresolved_votes != None %}
+        <h1>Unresolved Votes</h1>
+
+        <p>Sorry, Votefinder can't create a good votecount right now because there are some votes it doesn't understand. Please
+            resolve the ones listed below by deciding who the author intended to vote.</p>
+
+        <table cellpadding="2" cellspacing="2" border="0" id="unresolved">
+            {% for v in unresolved_votes %}
+                <tr>
+                    <td>{{ v.author.name }} votes {{ v.target_string|safe }}</td>
+                    <td><select class="resolver" id="{{ v.id }}">
+                        <option value="-1">Ignore</option>
+                        <option value="-2">No Execute</option>
+                        <option value="0" selected="selected">------</option>
+                        {% for p in players %}
+                            <option value="{{ p.player.id }}">{{ p.player.name|safe }}</option>
+                        {% endfor %}
+                    </select></td>
+                </tr>
+            {% endfor %}
+        </table>
         {% else %}
             <div id="votecount_contents"><div class="well" valign="top" id="votecount-well" style="word-wrap: break-word;">
                 <div class="row">
@@ -749,7 +773,7 @@ $(document).ready(function () {
                         <div id="votecount-results">{% votecount_html vc %}</div>
                     </div>
                     <div class="col-md-3">
-                        <textarea id="bbcode" class="form-control">{{ bbcode_votecount|safe|escape }}</textarea>
+                        <textarea id="bbcode" class="form-control">{{ bbcode_votecount }}</textarea>
                     </div>
                 </div>
             </div></div>

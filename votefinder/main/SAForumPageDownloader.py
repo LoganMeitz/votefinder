@@ -6,6 +6,9 @@ import requests
 from bs4 import BeautifulSoup
 from django.conf import settings
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 class SAForumPageDownloader():
     def __init__(self):
@@ -65,22 +68,26 @@ class SAForumPageDownloader():
             return None
 
     def reply_to_thread(self, thread, message):
+        print("Calling reply to thread")
         get_url = f'https://forums.somethingawful.com/newreply.php?action=newreply&threadid={thread}'
         post_url = 'https://forums.somethingawful.com/newreply.php?action=newreply'
 
         page_data = self.download(get_url)
         if page_data is None:
+            logger.debug(f"Failed to get thread at: https://forums.somethingawful.com/newreply.php?action=newreply&threadid={thread}")
             return False  # Could not retrieve anything from the page.
 
-        soup = BeautifulSoup(page_data, 'html.parser')
+        soup = BeautifulSoup(page_data)
 
         inputs = {'message': message}
+
         for input_element in soup.find_all('input', {'value': True}):
             inputs[input_element['name']] = input_element['value']
 
         if not inputs['disablesmilies']:
             return False  # Thread is locked.
+        
         inputs.pop('disablesmilies')
         inputs.pop('preview')
 
-        self.session.post(post_url, data=inputs)
+        self.session.post(post_url, inputs)

@@ -13,6 +13,9 @@ from votefinder.main.models import Comment, VotecountTemplate
 
 from votefinder.main import VoteCounter
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 class VotecountFormatter:
     def __init__(self, game):
@@ -83,6 +86,8 @@ class VotecountFormatter:
     # It might be nice to replace this with another inclusion tag, like how
     # the HTML votecount is generated - this works for now, though
     def get_bbcode(self):
+        if settings.VF_DEBUG == True:
+            logger.debug("Have called get_bbcode")
         game_template = Template(self.game_template.overall)
         
         # Get together individual votecount lines
@@ -101,9 +106,6 @@ class VotecountFormatter:
 
                 votelist_string = ', '.join(votelist)
 
-                # temporarily removing reference to tickmark images for consistency
-                # would like to rework template system to make these user-selectable but
-                # that's part of a larger votecount template rewrite
                 ticks = (f"⚪" * (self.to_execute - x['votes_received'])) + f"🟢" * x['votes_received']
 
                 votecount += template_single_line.render(context = Context({'ticks': ticks,'target': x['player_name'], 'count': x['votes_received'], 'votelist': votelist_string}))
@@ -126,3 +128,13 @@ class VotecountFormatter:
             'deadline': deadline
         }))
 
+    # get_bbcode is used to get the BBCode formatted for posting on the website
+    # as well as to B&R - this function is instead  explicitly called to do
+    # a find-and-replace to pop out HTML-escaped unicode that Votefinder will
+    # nicely post in a thread
+    def get_escaped_bbcode(self):
+        to_replace = self.get_bbcode()
+        to_replace = to_replace.replace("amp;","")
+        to_replace = to_replace.replace("🟢","&#x1F7E2;")
+        to_replace = to_replace.replace("⚪","&#x26AA;")
+        return to_replace
