@@ -1066,7 +1066,7 @@ def post_vc(request, gameid):
 
     if game.last_vc_post is not None and datetime.now() - game.last_vc_post < timedelta(minutes=60) and (game.deadline and game.deadline - datetime.now() > timedelta(minutes=60)):
         messages.add_message(request, messages.ERROR, 'Votefinder has posted too recently in that game.')
-    if True:
+    else:
         game.last_vc_post = datetime.now()
         game.save()
 
