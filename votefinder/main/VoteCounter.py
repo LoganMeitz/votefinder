@@ -78,11 +78,12 @@ class VoteCounter:
         vc_formatter = VotecountFormatter.VotecountFormatter(game)
         vc_formatter.go()
         message = f'{message}\n\n'
-        message += vc_formatter.get_escaped_bbcode()
         if game.home_forum == 'sa':
             message = f':redhammer: {message}'
+            message += vc_formatter.get_escaped_bbcode()
             dl = SAForumPageDownloader.SAForumPageDownloader()
         elif game.home_forum == 'bnr':
+            message += vc_formatter.get_bbcode()
             dl = BNRApi.BNRApi()
         dl.reply_to_thread(game.thread_id, message.format(name))
 
