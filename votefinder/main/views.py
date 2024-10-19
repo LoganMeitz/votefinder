@@ -439,6 +439,12 @@ def delete_spectators(request, gameid):
     return HttpResponseRedirect(game.get_absolute_url())
 
 
+# Leaving this present for future reference if needed -
+# I know it's bad form to leave big commented out functions, but this was
+# removed when I changed how votecounts are generated - and I occasionally
+# stumble on code that references how this originally worked.
+# This will go away... eventually.
+#
 # def votecount(request, gameid):
 #     game = get_object_or_404(Game, id=gameid)
 #     try:
@@ -1066,7 +1072,7 @@ def post_vc(request, gameid):
 
     if game.last_vc_post is not None and datetime.now() - game.last_vc_post < timedelta(minutes=60) and (game.deadline and game.deadline - datetime.now() > timedelta(minutes=60)):
         messages.add_message(request, messages.ERROR, 'Votefinder has posted too recently in that game.')
-    if True:
+    else:
         game.last_vc_post = datetime.now()
         game.save()
 
