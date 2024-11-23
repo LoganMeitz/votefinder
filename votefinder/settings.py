@@ -103,6 +103,8 @@ ADMINS = (
 )
 MANAGERS = ADMINS
 
+EMAIL_BACKEND = env_string('VF_FROM_EMAIL', default="django.core.mail.backends.console.EmailBackend")
+EMAIL_FILE_PATH = "/tmp/app-messages" 
 EMAIL_HOST = VF_EMAIL_HOST
 EMAIL_PORT = VF_EMAIL_PORT
 EMAIL_HOST_USER = VF_EMAIL_USER
